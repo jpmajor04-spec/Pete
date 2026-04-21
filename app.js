@@ -11,6 +11,115 @@ const state = {
   introOffset: 0,  // session-only: how many "know it" skips this session
 };
 
+/* ─── WARDROBE CATALOG ───────────────────────────────────────────────────────── */
+
+const WARDROBE_CATALOG = [
+  { id: 'shirt_ocean',    type: 'shirt',     name: 'Ocean Blue',  cost: 15, key: 'ocean' },
+  { id: 'shirt_sunset',   type: 'shirt',     name: 'Sunset',      cost: 15, key: 'sunset' },
+  { id: 'shirt_forest',   type: 'shirt',     name: 'Forest',      cost: 15, key: 'forest' },
+  { id: 'shirt_midnight', type: 'shirt',     name: 'Midnight',    cost: 25, key: 'midnight' },
+  { id: 'shirt_gold',     type: 'shirt',     name: 'Gold Rush',   cost: 25, key: 'gold' },
+  { id: 'hat_flatcap',    type: 'hat',       name: 'Flat Cap',    cost: 20, key: 'flatcap' },
+  { id: 'hat_beanie',     type: 'hat',       name: 'Beanie',      cost: 20, key: 'beanie' },
+  { id: 'acc_bowtie',     type: 'accessory', name: 'Bow Tie',     cost: 15, key: 'bowtie' },
+  { id: 'acc_scarf',      type: 'accessory', name: 'Scarf',       cost: 15, key: 'scarf' },
+];
+
+/* ─── COINS ──────────────────────────────────────────────────────────────────── */
+
+function getCoins() {
+  const earned = parseInt(localStorage.getItem('pete_coins_earned') || '0', 10);
+  const spent  = parseInt(localStorage.getItem('pete_coins_spent')  || '0', 10);
+  return earned - spent;
+}
+
+function earnCoins(n) {
+  const earned = parseInt(localStorage.getItem('pete_coins_earned') || '0', 10);
+  localStorage.setItem('pete_coins_earned', earned + n);
+  updateCoinDisplay();
+}
+
+function spendCoins(n) {
+  const spent = parseInt(localStorage.getItem('pete_coins_spent') || '0', 10);
+  localStorage.setItem('pete_coins_spent', spent + n);
+  updateCoinDisplay();
+}
+
+function updateCoinDisplay() {
+  const coins = getCoins();
+  document.querySelectorAll('.coin-count').forEach(el => el.textContent = coins);
+}
+
+/* ─── STREAK ─────────────────────────────────────────────────────────────────── */
+
+function getStreak() {
+  try {
+    return JSON.parse(localStorage.getItem('pete_streak') || '{"count":0,"lastDate":null}');
+  } catch { return { count: 0, lastDate: null }; }
+}
+
+function updateStreak() {
+  const streak = getStreak();
+  const todayKey = getTodayKey();
+  if (streak.lastDate === todayKey) return; // already recorded today
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yKey = `${yesterday.getFullYear()}-${yesterday.getMonth()+1}-${yesterday.getDate()}`;
+
+  streak.count = (streak.lastDate === yKey) ? streak.count + 1 : 1;
+  streak.lastDate = todayKey;
+  localStorage.setItem('pete_streak', JSON.stringify(streak));
+  updateStreakDisplay();
+}
+
+function updateStreakDisplay() {
+  const { count } = getStreak();
+  document.querySelectorAll('.streak-count').forEach(el => el.textContent = count);
+}
+
+/* ─── WARDROBE STORAGE ───────────────────────────────────────────────────────── */
+
+function getOwned() {
+  try { return JSON.parse(localStorage.getItem('pete_owned') || '[]'); }
+  catch { return []; }
+}
+
+function isOwned(id) { return getOwned().includes(id); }
+
+function ownItem(id) {
+  const owned = getOwned();
+  if (!owned.includes(id)) {
+    owned.push(id);
+    localStorage.setItem('pete_owned', JSON.stringify(owned));
+  }
+}
+
+function getEquipped() {
+  try { return JSON.parse(localStorage.getItem('pete_equipped') || '{}'); }
+  catch { return {}; }
+}
+
+function equipItem(id, type) {
+  const equipped = getEquipped();
+  equipped[type] = (equipped[type] === id) ? null : id; // toggle
+  localStorage.setItem('pete_equipped', JSON.stringify(equipped));
+  refreshAllPetes();
+  renderWardrobeGrid(document.querySelector('.wardrobe-tab.active')?.dataset.tab || 'shirt');
+  updateWardrobePreview();
+}
+
+function getWardrobeForPete() {
+  const equipped = getEquipped();
+  const wardrobe = {};
+  for (const [type, id] of Object.entries(equipped)) {
+    if (!id) continue;
+    const item = WARDROBE_CATALOG.find(i => i.id === id);
+    if (item) wardrobe[type === 'accessory' ? 'accessory' : type] = item.key;
+  }
+  return wardrobe;
+}
+
 /* ─── STORAGE ────────────────────────────────────────────────────────────────── */
 
 const STORAGE_KEY = 'wordsmith_progress';
@@ -123,28 +232,31 @@ function handleLearnIt() {
 /* ─── PETE INJECTION ─────────────────────────────────────────────────────────── */
 
 function injectAllPetes() {
-  // Nav — tiny
-  injectPete('peteNav', 32);
+  const wd = getWardrobeForPete();
 
-  // Today screen — large, with bubble
+  injectPete('peteNav', 32, { wardrobe: wd });
+
   const el = document.getElementById('peteToday');
-  if (el) el.innerHTML = createPeteSVG(90, { bubble: 'A new word<br>for you! 📖' });
+  if (el) el.innerHTML = createPeteSVG(90, { bubble: 'A new word<br>for you! 📖', wardrobe: wd });
 
-  // Step screens — small with contextual bubbles
   const el2 = document.getElementById('peteSpell');
-  if (el2) el2.innerHTML = createPeteSVG(58, { bubble: 'Can you<br>spell it?' });
+  if (el2) el2.innerHTML = createPeteSVG(58, { bubble: 'Can you<br>spell it?', wardrobe: wd });
 
   const el3 = document.getElementById('peteQuiz');
-  if (el3) el3.innerHTML = createPeteSVG(58, { bubble: 'Choose<br>wisely!' });
+  if (el3) el3.innerHTML = createPeteSVG(58, { bubble: 'Choose<br>wisely!', wardrobe: wd });
 
   const el4 = document.getElementById('peteSentence');
-  if (el4) el4.innerHTML = createPeteSVG(58, { bubble: 'Make it<br>your own.' });
+  if (el4) el4.innerHTML = createPeteSVG(58, { bubble: 'Make it<br>your own.', wardrobe: wd });
 
   const el5 = document.getElementById('peteChallenge');
-  if (el5) el5.innerHTML = createPeteSVG(62, { flip: true });
+  if (el5) el5.innerHTML = createPeteSVG(62, { flip: true, wardrobe: wd });
 
-  // Intro screen Pete (done separately since bubble text is dynamic)
+  // Intro screen
   initIntro();
+}
+
+function refreshAllPetes() {
+  injectAllPetes();
 }
 
 /* ─── SENTENCE EVALUATION ────────────────────────────────────────────────────── */
@@ -316,17 +428,8 @@ function initSpelling() {
 function onSpellInput() {
   const inputEl = document.getElementById('spellInput');
   const checkBtn = document.getElementById('spellCheckBtn');
-  const letterDisplayEl = document.getElementById('spellLetterDisplay');
-  const val = inputEl.value.trim();
-
-  checkBtn.disabled = val.length === 0;
-
-  // Live letter comparison
-  if (val.length > 0) {
-    renderLetterDisplay(val, state.word.word);
-  } else {
-    letterDisplayEl.innerHTML = '';
-  }
+  checkBtn.disabled = inputEl.value.trim().length === 0;
+  // No live letter hint — reveal only after checking
 }
 
 function renderLetterDisplay(typed, target) {
@@ -678,8 +781,14 @@ function initChallenge() {
 }
 
 function markChallenged() {
+  const wasAlreadyChallenged = getTodayRecord().challenged;
   saveProgress({ challenged: true });
   updateProgressDots();
+
+  if (!wasAlreadyChallenged) {
+    earnCoins(10);
+    updateStreak();
+  }
 
   document.getElementById('challengeCompleteBlock').classList.remove('hidden');
   document.getElementById('shareGrid').classList.add('hidden');
@@ -770,6 +879,104 @@ function shareCopy() {
   });
 }
 
+
+/* ─── WARDROBE SCREEN ────────────────────────────────────────────────────────── */
+
+function initWardrobe() {
+  updateWardrobePreview();
+  updateCoinDisplay();
+  renderWardrobeGrid('shirt');
+
+  // Tab switching
+  document.querySelectorAll('.wardrobe-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.wardrobe-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderWardrobeGrid(tab.dataset.tab);
+    });
+  });
+}
+
+function updateWardrobePreview() {
+  const wd = getWardrobeForPete();
+  const el = document.getElementById('peteWardrobePreview');
+  if (el) el.innerHTML = createPeteSVG(100, { wardrobe: wd });
+}
+
+function renderWardrobeGrid(tab) {
+  const grid = document.getElementById('wardrobeGrid');
+  const items = WARDROBE_CATALOG.filter(i => i.type === tab);
+  const equipped = getEquipped();
+  const coins = getCoins();
+
+  grid.innerHTML = '';
+
+  // Default option (free)
+  const defaultCard = document.createElement('div');
+  const isDefaultEquipped = !equipped[tab];
+  defaultCard.className = `wardrobe-item${isDefaultEquipped ? ' equipped' : ''}`;
+  const defaultWd = { ...getWardrobeForPete() };
+  delete defaultWd[tab === 'accessory' ? 'accessory' : tab];
+  defaultCard.innerHTML = `
+    <div class="wardrobe-item-preview">${createPeteSVG(60, { wardrobe: defaultWd })}</div>
+    <div class="wardrobe-item-name">Default</div>
+    ${isDefaultEquipped
+      ? `<div class="wardrobe-item-default">✓ Wearing now</div>`
+      : `<button class="wardrobe-item-btn equip" data-id="__default__" data-type="${tab}">Wear this</button>`
+    }
+  `;
+  if (!isDefaultEquipped) {
+    defaultCard.querySelector('button').addEventListener('click', () => {
+      const eq = getEquipped();
+      eq[tab] = null;
+      localStorage.setItem('pete_equipped', JSON.stringify(eq));
+      refreshAllPetes();
+      renderWardrobeGrid(tab);
+      updateWardrobePreview();
+    });
+  }
+  grid.appendChild(defaultCard);
+
+  items.forEach(item => {
+    const owned = isOwned(item.id);
+    const isEquipped = equipped[tab] === item.id;
+    const canAfford = coins >= item.cost;
+
+    // Preview Pete with this item over current wardrobe
+    const previewWd = { ...getWardrobeForPete(), [tab === 'accessory' ? 'accessory' : tab]: item.key };
+
+    const card = document.createElement('div');
+    card.className = `wardrobe-item${isEquipped ? ' equipped' : owned ? ' owned' : ''}`;
+    card.innerHTML = `
+      <div class="wardrobe-item-preview">${createPeteSVG(60, { wardrobe: previewWd })}</div>
+      <div class="wardrobe-item-name">${item.name}</div>
+      ${isEquipped
+        ? `<button class="wardrobe-item-btn unequip" data-id="${item.id}" data-type="${tab}">✓ Equipped</button>`
+        : owned
+          ? `<button class="wardrobe-item-btn equip" data-id="${item.id}" data-type="${tab}">Equip</button>`
+          : `<button class="wardrobe-item-btn buy" data-id="${item.id}" data-type="${tab}" ${!canAfford ? 'disabled style="opacity:0.5"' : ''}>🪙 ${item.cost}</button>`
+      }
+    `;
+
+    const btn = card.querySelector('button');
+    btn.addEventListener('click', () => {
+      if (isEquipped || owned) {
+        equipItem(item.id, tab);
+      } else {
+        if (getCoins() < item.cost) {
+          showToast('Not enough coins — keep learning words!');
+          return;
+        }
+        spendCoins(item.cost);
+        ownItem(item.id);
+        equipItem(item.id, tab);
+        showToast(`${item.name} unlocked!`);
+      }
+    });
+
+    grid.appendChild(card);
+  });
+}
 
 /* ─── HISTORY SCREEN ─────────────────────────────────────────────────────────── */
 
@@ -865,12 +1072,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inject Pete mascot into all screens (also calls initIntro)
   injectAllPetes();
 
+  // Init coins + streak display
+  updateCoinDisplay();
+  updateStreakDisplay();
+
   // Start on intro screen
   showScreen('intro');
 
   // Intro buttons
   document.getElementById('introKnowBtn').addEventListener('click', handleKnowIt);
   document.getElementById('introLearnBtn').addEventListener('click', handleLearnIt);
+
+  // Wardrobe
+  document.getElementById('wardrobeBtn').addEventListener('click', () => {
+    initWardrobe();
+    showScreen('wardrobe');
+  });
+  document.getElementById('wardrobeBackBtn').addEventListener('click', () => showScreen('today'));
 
   // Today → Start
   document.getElementById('startPracticeBtn').addEventListener('click', handleStartPractice);

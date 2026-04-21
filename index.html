@@ -15,8 +15,16 @@
     <div class="nav-logo">
       <div id="peteNav"></div>
       <span class="nav-logo-text">Pete</span>
+      <div class="nav-streak" id="navStreak">
+        <span>🔥</span><span class="streak-count">0</span>
+      </div>
     </div>
-    <button class="nav-history-btn" id="historyBtn">Archive</button>
+    <div class="nav-actions">
+      <button class="nav-coins-btn" id="wardrobeBtn">
+        <span class="nav-coins-icon">🪙</span><span class="coin-count">0</span>
+      </button>
+      <button class="nav-history-btn" id="historyBtn">Archive</button>
+    </div>
   </nav>
 
   <!-- MAIN APP -->
@@ -237,6 +245,28 @@
       </div>
     </div>
 
+    <!-- SCREEN: WARDROBE -->
+    <div class="screen" id="screen-wardrobe">
+      <div class="wardrobe-header">
+        <button class="back-btn" id="wardrobeBackBtn">← Back</button>
+        <h2 class="wardrobe-title">Pete's Wardrobe</h2>
+      </div>
+      <div class="wardrobe-preview-row">
+        <div id="peteWardrobePreview"></div>
+        <div class="wardrobe-balance">
+          <div class="wardrobe-balance-amount"><span class="coin-count">0</span> 🪙</div>
+          <div class="wardrobe-balance-label">coins available</div>
+          <div class="wardrobe-balance-hint">Earn 10 coins per word mastered</div>
+        </div>
+      </div>
+      <div class="wardrobe-tabs">
+        <button class="wardrobe-tab active" data-tab="shirt">Shirts</button>
+        <button class="wardrobe-tab" data-tab="hat">Hats</button>
+        <button class="wardrobe-tab" data-tab="accessory">Accessories</button>
+      </div>
+      <div class="wardrobe-grid" id="wardrobeGrid"></div>
+    </div>
+
     <!-- SCREEN: HISTORY -->
     <div class="screen" id="screen-history">
       <div class="history-header">
@@ -251,9 +281,9 @@
 
   <div class="toast hidden" id="toast"></div>
 
-  <script src="words.js?v=5"></script>
-  <script src="quiz.js?v=5"></script>
-  <script src="pete.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="words.js?v=6"></script>
+  <script src="quiz.js?v=6"></script>
+  <script src="pete.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

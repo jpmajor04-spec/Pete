@@ -372,7 +372,7 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: 0 16px;
   height: 58px;
   background: rgba(245, 240, 232, 0.92);
   backdrop-filter: blur(16px);
@@ -383,6 +383,44 @@ body::before {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.nav-streak {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--gold-subtle);
+  padding: 3px 8px;
+  border-radius: 100px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-coins-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  background: var(--gold-subtle);
+  border: 1px solid rgba(138,106,16,0.2);
+  padding: 6px 12px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.nav-coins-btn:hover {
+  background: rgba(138,106,16,0.15);
 }
 
 .nav-logo-icon {
@@ -1230,6 +1268,169 @@ body::before {
 .quiz-result-correct .quiz-explanation-label { color: var(--green); }
 .quiz-result-incorrect .quiz-explanation { border-left-color: var(--red); }
 .quiz-result-incorrect .quiz-explanation-label { color: var(--red); }
+
+/* ─── WARDROBE SCREEN ────────────────────────────────────────────────────────── */
+
+.wardrobe-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 20px 0;
+}
+
+.wardrobe-title {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.wardrobe-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px 20px 16px;
+}
+
+.wardrobe-balance {
+  text-align: center;
+}
+
+.wardrobe-balance-amount {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.wardrobe-balance-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.wardrobe-balance-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.wardrobe-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wardrobe-tab {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 6px 16px;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.wardrobe-tab.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.wardrobe-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 16px 20px 40px;
+}
+
+.wardrobe-item {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: border-color var(--transition);
+}
+
+.wardrobe-item.equipped {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.wardrobe-item.owned {
+  border-color: var(--green);
+}
+
+.wardrobe-item-preview {
+  height: 70px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.wardrobe-item-name {
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.wardrobe-item-btn {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all var(--transition);
+}
+
+.wardrobe-item-btn.buy {
+  background: var(--gold-subtle);
+  color: var(--gold);
+  border: 1px solid rgba(138,106,16,0.25);
+}
+
+.wardrobe-item-btn.buy:hover {
+  background: rgba(138,106,16,0.18);
+}
+
+.wardrobe-item-btn.equip {
+  background: var(--green-subtle);
+  color: var(--green);
+  border: 1px solid rgba(42,110,70,0.25);
+}
+
+.wardrobe-item-btn.equip:hover {
+  background: rgba(42,110,70,0.18);
+}
+
+.wardrobe-item-btn.unequip {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border: 1px solid rgba(184,76,42,0.25);
+}
+
+.wardrobe-item-default {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
 
 /* ─── HISTORY ────────────────────────────────────────────────────────────────── */
 
