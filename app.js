@@ -8,6 +8,7 @@ const state = {
   sentencePassed: false,
   userSentence: '',
   revealed: false,
+  introOffset: 0,  // session-only: how many "know it" skips this session
 };
 
 /* ─── STORAGE ────────────────────────────────────────────────────────────────── */
@@ -57,6 +58,68 @@ function formatDate(date) {
   });
 }
 
+/* ─── INTRO SCREEN ───────────────────────────────────────────────────────────── */
+
+function getIntroWord() {
+  const baseOffset = parseInt(localStorage.getItem('wordsmith_offset') || '0', 10);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+  return WORDS[(dayOfYear + baseOffset + state.introOffset) % WORDS.length];
+}
+
+function initIntro() {
+  const word = getIntroWord();
+  document.getElementById('introWord').textContent = word.word;
+  document.getElementById('introPos').textContent = word.partOfSpeech;
+
+  const peteEl = document.getElementById('peteIntro');
+  if (peteEl) peteEl.innerHTML = createPeteSVG(80, { bubble: 'Do you<br>know me? 🤔' });
+}
+
+function handleKnowIt() {
+  state.introOffset++;
+  // Animate word out and back in
+  const wordEl = document.getElementById('introWord');
+  const posEl = document.getElementById('introPos');
+  wordEl.style.opacity = '0';
+  wordEl.style.transform = 'translateY(-12px)';
+  posEl.style.opacity = '0';
+  setTimeout(() => {
+    initIntroWord();
+    wordEl.style.transition = 'none';
+    posEl.style.transition = 'none';
+    wordEl.style.transform = 'translateY(12px)';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        wordEl.style.transition = '';
+        posEl.style.transition = '';
+        wordEl.style.opacity = '1';
+        wordEl.style.transform = 'translateY(0)';
+        posEl.style.opacity = '1';
+      });
+    });
+  }, 180);
+}
+
+function initIntroWord() {
+  const word = getIntroWord();
+  document.getElementById('introWord').textContent = word.word;
+  document.getElementById('introPos').textContent = word.partOfSpeech;
+}
+
+function handleLearnIt() {
+  // Commit the current intro offset as the persistent word offset
+  const baseOffset = parseInt(localStorage.getItem('wordsmith_offset') || '0', 10);
+  const newOffset = (baseOffset + state.introOffset) % WORDS.length;
+  localStorage.setItem('wordsmith_offset', newOffset);
+  state.introOffset = 0;
+
+  // Load the today screen for the chosen word
+  initToday();
+  showScreen('today');
+}
+
 /* ─── PETE INJECTION ─────────────────────────────────────────────────────────── */
 
 function injectAllPetes() {
@@ -79,6 +142,9 @@ function injectAllPetes() {
 
   const el5 = document.getElementById('peteChallenge');
   if (el5) el5.innerHTML = createPeteSVG(62, { flip: true });
+
+  // Intro screen Pete (done separately since bubble text is dynamic)
+  initIntro();
 }
 
 /* ─── SENTENCE EVALUATION ────────────────────────────────────────────────────── */
@@ -796,12 +862,15 @@ function showToast(msg) {
 /* ─── EVENT LISTENERS ────────────────────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Inject Pete mascot into all screens
+  // Inject Pete mascot into all screens (also calls initIntro)
   injectAllPetes();
 
-  // Init today screen
-  initToday();
-  showScreen('today');
+  // Start on intro screen
+  showScreen('intro');
+
+  // Intro buttons
+  document.getElementById('introKnowBtn').addEventListener('click', handleKnowIt);
+  document.getElementById('introLearnBtn').addEventListener('click', handleLearnIt);
 
   // Today → Start
   document.getElementById('startPracticeBtn').addEventListener('click', handleStartPractice);

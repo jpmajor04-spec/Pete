@@ -22,6 +22,20 @@
   <!-- MAIN APP -->
   <main class="main" id="app">
 
+    <!-- SCREEN: INTRO (word triage) -->
+    <div class="screen active" id="screen-intro">
+      <div class="intro-wrap">
+        <div id="peteIntro" class="intro-pete"></div>
+        <p class="intro-eyebrow">Do you know this word?</p>
+        <h1 class="intro-word" id="introWord"></h1>
+        <p class="intro-pos" id="introPos"></p>
+        <div class="intro-btns">
+          <button class="intro-btn intro-btn-know" id="introKnowBtn">Know it</button>
+          <button class="intro-btn intro-btn-learn" id="introLearnBtn">Learn it</button>
+        </div>
+      </div>
+    </div>
+
     <!-- SCREEN: TODAY'S WORD -->
     <div class="screen active" id="screen-today">
       <div class="today-card">
@@ -237,9 +251,9 @@
 
   <div class="toast hidden" id="toast"></div>
 
-  <script src="words.js?v=4"></script>
-  <script src="quiz.js?v=4"></script>
-  <script src="pete.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="words.js?v=5"></script>
+  <script src="quiz.js?v=5"></script>
+  <script src="pete.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

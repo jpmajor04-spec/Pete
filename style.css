@@ -270,6 +270,99 @@ body::before {
   z-index: 0;
 }
 
+/* ─── INTRO SCREEN ──────────────────────────────────────────────────────────── */
+
+.intro-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 64px);
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.intro-pete {
+  margin-bottom: 1.5rem;
+}
+
+.intro-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.intro-word {
+  font-family: var(--font-serif);
+  font-size: clamp(2.8rem, 12vw, 5rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.intro-pos {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2.5rem;
+  transition: opacity 0.18s ease;
+}
+
+.intro-btns {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  max-width: 320px;
+}
+
+.intro-btn {
+  flex: 1;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.intro-btn:active {
+  transform: scale(0.96);
+}
+
+.intro-btn-know {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.intro-btn-know:hover {
+  border-color: var(--text-muted);
+  box-shadow: var(--shadow-md);
+}
+
+.intro-btn-learn {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 4px 16px rgba(184,76,42,0.35);
+}
+
+.intro-btn-learn:hover {
+  background: var(--accent-light);
+  box-shadow: 0 6px 20px rgba(184,76,42,0.45);
+}
+
 /* ─── NAV ───────────────────────────────────────────────────────────────────── */
 
 .nav {
