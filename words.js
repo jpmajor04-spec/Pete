@@ -870,9 +870,10 @@ function getTodayWord() {
   return words[(dayOfYear + offset) % words.length];
 }
 
-// Get a word for a specific past date (uses same user shuffle for consistency)
+// Get a word for a specific past date (uses same user shuffle + offset for consistency)
 function getWordForDate(date) {
   const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
+  const offset = parseInt(localStorage.getItem('wordsmith_offset') || '0', 10);
   const words = getShuffledWords();
-  return words[dayOfYear % words.length];
+  return words[(dayOfYear + offset) % words.length];
 }
