@@ -8,7 +8,6 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.jesse.peteapp
-        provisioning_profile: Pete App Store
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
@@ -21,6 +20,11 @@ workflows:
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files com.jesse.peteapp \
+            --type IOS_APP_STORE \
+            --create
       - name: Set up code signing
         script: |
           xcode-project use-profiles
