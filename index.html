@@ -2,26 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Pete — A New Word Every Day</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
   <!-- NAV -->
   <nav class="nav">
-    <div class="nav-logo">
+    <div class="nav-logo" id="navHomeBtn" title="Home">
       <div id="peteNav"></div>
       <span class="nav-logo-text">Pete</span>
       <div class="nav-streak" id="navStreak">
-        <span>🔥</span><span class="streak-count">0</span>
+        <svg class="icon-flame" width="13" height="17" viewBox="0 0 13 17" fill="none"><path d="M6.5 1C8 3.5 10.5 6.5 10.5 10C10.5 13.2 8.8 15.5 6.5 16.5C4.2 15.5 2.5 13.2 2.5 10C2.5 7 4.5 4 5 2.5C5 4.5 6 6 6.5 6C7.3 4.5 8 2 6.5 1Z" fill="#e05818"/><path d="M6.5 12C6.5 12 8 11 8 9.5C8 9 7.5 9.5 6.5 10.5C5.5 9.5 5 9 5 9.5C5 11 6.5 12 6.5 12Z" fill="#f5c040"/></svg>
+        <span class="streak-count">0</span>
       </div>
     </div>
     <div class="nav-actions">
       <button class="nav-coins-btn" id="wardrobeBtn">
-        <span class="nav-coins-icon">🪙</span><span class="coin-count">0</span>
+        <svg class="icon-coin" width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" fill="#c8a010" stroke="#8a6808" stroke-width="1.2"/><circle cx="9" cy="9" r="5.8" fill="#d4b828"/><path d="M9 5C10.7 5 12 6 12 7.5C12 8.5 11.3 9.2 10.2 9.5C11.4 9.8 12.2 10.6 12.2 11.8C12.2 13.3 10.9 14 9 14C7.1 14 5.8 13.3 5.8 11.8H7.2C7.2 12.4 7.9 12.8 9 12.8C10 12.8 10.7 12.4 10.7 11.7C10.7 11 10 10.6 9 10.6H8V9.4H9C9.9 9.4 10.5 9 10.5 8.3C10.5 7.6 9.8 7.2 9 7.2C8.1 7.2 7.5 7.6 7.5 8.2H6.2C6.2 6.8 7.4 5 9 5Z" fill="#8a6808"/></svg>
+        <span class="coin-count">0</span>
+      </button>
+      <button class="nav-house-btn" id="houseNavBtn" title="Pete's House">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M2 9L10 2L18 9V18H13V13H7V18H2V9Z" fill="#8a5c28" stroke="#5c3a18" stroke-width="1.2" stroke-linejoin="round"/></svg>
       </button>
       <button class="nav-history-btn" id="historyBtn">Archive</button>
     </div>
@@ -30,8 +35,40 @@
   <!-- MAIN APP -->
   <main class="main" id="app">
 
+    <!-- SCREEN: HOME -->
+    <div class="screen active" id="screen-home">
+      <div class="home-wrap">
+        <div id="peteHome" class="home-pete"></div>
+        <h1 class="home-title" id="homeTitle">Good to see you.</h1>
+        <p class="home-subtitle" id="homeSubtitle">What would you like to do?</p>
+        <div class="home-actions">
+          <button class="home-btn home-btn-primary" id="homeWordBtn">
+            <span class="home-btn-icon">
+              <svg width="26" height="24" viewBox="0 0 26 24" fill="none"><rect x="2" y="3" width="10" height="16" rx="2" fill="rgba(255,255,255,0.25)"/><rect x="14" y="3" width="10" height="16" rx="2" fill="rgba(255,255,255,0.4)"/><path d="M12 3 L12 19" stroke="rgba(255,255,255,0.5)" stroke-width="2"/><path d="M4 8 L10 8M4 11 L10 11M4 14 L7 14" stroke="rgba(255,255,255,0.8)" stroke-width="1.5" stroke-linecap="round"/><path d="M16 8 L22 8M16 11 L22 11" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </span>
+            <span class="home-btn-text">
+              <strong>Word of the Day</strong>
+              <small>Learn today's new word</small>
+            </span>
+            <span class="home-btn-arrow">→</span>
+          </button>
+          <button class="home-btn home-btn-secondary" id="homePracticeBtn">
+            <span class="home-btn-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12A7 7 0 0 1 19 9" stroke="#5c4f3d" stroke-width="2.5" stroke-linecap="round"/><path d="M19 12A7 7 0 0 1 5 15" stroke="#5c4f3d" stroke-width="2.5" stroke-linecap="round"/><path d="M17.5 5.5 L19 9 L22.5 8" stroke="#5c4f3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 18.5 L5 15 L1.5 16" stroke="#5c4f3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="home-btn-text">
+              <strong>Practice</strong>
+              <small>Review words from this week</small>
+            </span>
+            <span class="home-btn-arrow">→</span>
+          </button>
+        </div>
+        <div class="home-wotw-block" id="homeWotwBlock"></div>
+      </div>
+    </div>
+
     <!-- SCREEN: INTRO (word triage) -->
-    <div class="screen active" id="screen-intro">
+    <div class="screen" id="screen-intro">
       <div class="intro-wrap">
         <div id="peteIntro" class="intro-pete"></div>
         <p class="intro-eyebrow">Do you know this word?</p>
@@ -203,31 +240,31 @@
 
         <div class="share-grid" id="shareGrid">
           <button class="share-tile" id="shareNativeBtn">
-            <span class="share-tile-icon">↑</span>
+            <span class="share-tile-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 14V3M11 3L7 7M11 3L15 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13V18H18V13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <span class="share-tile-label">Share</span>
           </button>
           <button class="share-tile" id="shareMessagesBtn">
-            <span class="share-tile-icon">💬</span>
+            <span class="share-tile-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 4H19C19.6 4 20 4.4 20 5V15C20 15.6 19.6 16 19 16H7L3 20V5C3 4.4 3.4 4 4 4Z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/><path d="M7 9H15M7 12H12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
             <span class="share-tile-label">Messages</span>
           </button>
           <button class="share-tile" id="shareEmailBtn">
-            <span class="share-tile-icon">✉️</span>
+            <span class="share-tile-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="5" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M2 8L11 13.5L20 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
             <span class="share-tile-label">Email</span>
           </button>
           <button class="share-tile" id="shareWhatsappBtn">
-            <span class="share-tile-icon">🟢</span>
+            <span class="share-tile-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2" fill="none"/><path d="M7 11C7 8.8 8.8 7 11 7C13.2 7 15 8.8 15 11C15 13.2 13.2 15 11 15C10.2 15 9.4 14.7 8.8 14.3L7 15L7.7 13.2C7.3 12.6 7 11.8 7 11Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/></svg></span>
             <span class="share-tile-label">WhatsApp</span>
           </button>
           <button class="share-tile" id="shareTwitterBtn">
-            <span class="share-tile-icon">𝕏</span>
+            <span class="share-tile-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M4 4L18 18M18 4L4 18" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></span>
             <span class="share-tile-label">Twitter / X</span>
           </button>
           <button class="share-tile" id="shareInstagramBtn">
-            <span class="share-tile-icon">📸</span>
+            <span class="share-tile-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2.5" y="2.5" width="17" height="17" rx="5" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="11" cy="11" r="4" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="16.5" cy="5.5" r="1.2" fill="currentColor"/></svg></span>
             <span class="share-tile-label">Instagram</span>
           </button>
           <button class="share-tile" id="shareCopyBtn">
-            <span class="share-tile-icon">📋</span>
+            <span class="share-tile-icon"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="8" y="8" width="11" height="12" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M14 8V5C14 4.4 13.6 4 13 4H4C3.4 4 3 4.4 3 5V14C3 14.6 3.4 15 4 15H8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
             <span class="share-tile-label">Copy</span>
           </button>
         </div>
@@ -245,6 +282,126 @@
       </div>
     </div>
 
+    <!-- SCREEN: WORD MASTERED -->
+    <div class="screen" id="screen-mastered">
+      <div class="mastered-wrap">
+        <div id="peteMastered" class="mastered-pete"></div>
+        <div class="mastered-quote" id="masteredQuote"></div>
+        <div class="mastered-word-block">
+          <div class="mastered-label">Word mastered</div>
+          <div class="mastered-word" id="masteredWord"></div>
+        </div>
+        <div class="mastered-coins" id="masteredCoins"></div>
+        <button class="btn btn-primary mastered-home-btn" id="masteredHomeBtn">Back to home</button>
+      </div>
+    </div>
+
+    <!-- SCREEN: PRACTICE -->
+    <div class="screen" id="screen-practice">
+      <div class="practice-header">
+        <button class="back-btn" id="practiceBackBtn">← Back</button>
+        <h2 class="practice-title">Practice</h2>
+        <p class="practice-subtitle">Words you've seen this week</p>
+      </div>
+      <div class="practice-list" id="practiceList"></div>
+    </div>
+
+    <!-- SCREEN: REVISION -->
+    <div class="screen" id="screen-revision">
+      <div class="revision-header">
+        <button class="back-btn" id="revisionQuitBtn">← Quit</button>
+        <div class="revision-progress-wrap">
+          <div class="revision-progress-track">
+            <div class="revision-progress-fill" id="revisionProgressFill"></div>
+          </div>
+          <span class="revision-count" id="revisionCount"></span>
+        </div>
+        <div class="revision-score-wrap">
+          <span class="revision-score-label">Score</span>
+          <span class="revision-score" id="revisionScore">0</span>
+        </div>
+      </div>
+      <div id="revisionBody" class="revision-body"></div>
+    </div>
+
+    <!-- SCREEN: WORDERS OF THE WEEK -->
+    <div class="screen" id="screen-wotw">
+      <div class="wotw-header">
+        <button class="back-btn" id="wotwBackBtn">← Back</button>
+        <h2 class="wotw-title">Worders of the Week</h2>
+        <p class="wotw-subtitle">Five-star sentences — truly exceptional.</p>
+      </div>
+      <div id="petWotw" class="wotw-pete"></div>
+      <div class="wotw-list" id="wotwList"></div>
+    </div>
+
+    <!-- SCREEN: NICKNAME (first launch) -->
+    <div class="screen" id="screen-nickname">
+      <div class="nickname-wrap">
+        <div id="peteNickname" class="nickname-pete"></div>
+        <h1 class="nickname-title">What should we call you?</h1>
+        <p class="nickname-subtitle">This is how you'll appear on the leaderboard.</p>
+        <input type="text" class="nickname-input" id="nicknameInput"
+          placeholder="Enter a nickname…"
+          maxlength="20" autocorrect="off" autocapitalize="words" spellcheck="false"/>
+        <button class="btn btn-primary nickname-btn" id="nicknameSubmitBtn" disabled>Let's go →</button>
+      </div>
+    </div>
+
+    <!-- SCREEN: LEADERBOARD -->
+    <div class="screen" id="screen-leaderboard">
+      <div class="leaderboard-header">
+        <button class="back-btn" id="leaderboardBackBtn">← Back</button>
+        <h2 class="leaderboard-title">Leaderboard</h2>
+      </div>
+      <div class="leaderboard-tabs">
+        <button class="leaderboard-tab active" data-lb-tab="streak">Streak</button>
+        <button class="leaderboard-tab" data-lb-tab="stars">Stars</button>
+        <button class="leaderboard-tab" data-lb-tab="friends">Friends</button>
+      </div>
+      <div class="leaderboard-list" id="leaderboardList"></div>
+      <div class="friend-code-bar" id="friendCodeBar"></div>
+    </div>
+
+    <!-- SCREEN: BATTLE -->
+    <div class="screen" id="screen-battle">
+      <div class="battle-header">
+        <div class="battle-progress-bar-wrap">
+          <div class="battle-progress-fill" id="battleProgressFill"></div>
+        </div>
+        <div class="battle-header-row">
+          <div class="battle-count" id="battleCount">1 / 5</div>
+          <div class="battle-vs-label" id="battleVsLabel">vs. —</div>
+        </div>
+      </div>
+      <div class="battle-body" id="battleBody"></div>
+    </div>
+
+    <!-- SCREEN: HOUSE -->
+    <div class="screen" id="screen-house">
+      <div class="house-header">
+        <button class="back-btn" id="houseBackBtn">← Back</button>
+        <h2 class="house-title">Pete's House</h2>
+      </div>
+      <div class="house-preview-wrap">
+        <div class="house-room" id="houseRoom"></div>
+        <div class="house-pete-overlay" id="housePete"></div>
+      </div>
+      <div class="house-balance">
+        <span class="coin-count">0</span>
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" style="vertical-align:middle"><circle cx="9" cy="9" r="8" fill="#c8a010" stroke="#8a6808" stroke-width="1.2"/><circle cx="9" cy="9" r="5.8" fill="#d4b828"/><path d="M9 5C10.7 5 12 6 12 7.5C12 8.5 11.3 9.2 10.2 9.5C11.4 9.8 12.2 10.6 12.2 11.8C12.2 13.3 10.9 14 9 14C7.1 14 5.8 13.3 5.8 11.8H7.2C7.2 12.4 7.9 12.8 9 12.8C10 12.8 10.7 12.4 10.7 11.7C10.7 11 10 10.6 9 10.6H8V9.4H9C9.9 9.4 10.5 9 10.5 8.3C10.5 7.6 9.8 7.2 9 7.2C8.1 7.2 7.5 7.6 7.5 8.2H6.2C6.2 6.8 7.4 5 9 5Z" fill="#8a6808"/></svg>
+        coins
+      </div>
+      <div class="house-tabs">
+        <button class="house-tab active" data-htab="wallpaper">Wallpaper</button>
+        <button class="house-tab" data-htab="flooring">Flooring</button>
+        <button class="house-tab" data-htab="furniture">Furniture</button>
+        <button class="house-tab" data-htab="decor">Decor</button>
+        <button class="house-tab" data-htab="pet">Pets</button>
+      </div>
+      <div class="wardrobe-grid" id="houseGrid"></div>
+    </div>
+
     <!-- SCREEN: WARDROBE -->
     <div class="screen" id="screen-wardrobe">
       <div class="wardrobe-header">
@@ -254,9 +411,9 @@
       <div class="wardrobe-preview-row">
         <div id="peteWardrobePreview"></div>
         <div class="wardrobe-balance">
-          <div class="wardrobe-balance-amount"><span class="coin-count">0</span> 🪙</div>
+          <div class="wardrobe-balance-amount"><span class="coin-count">0</span> <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="vertical-align:middle"><circle cx="9" cy="9" r="8" fill="#c8a010" stroke="#8a6808" stroke-width="1.2"/><circle cx="9" cy="9" r="5.8" fill="#d4b828"/><path d="M9 5C10.7 5 12 6 12 7.5C12 8.5 11.3 9.2 10.2 9.5C11.4 9.8 12.2 10.6 12.2 11.8C12.2 13.3 10.9 14 9 14C7.1 14 5.8 13.3 5.8 11.8H7.2C7.2 12.4 7.9 12.8 9 12.8C10 12.8 10.7 12.4 10.7 11.7C10.7 11 10 10.6 9 10.6H8V9.4H9C9.9 9.4 10.5 9 10.5 8.3C10.5 7.6 9.8 7.2 9 7.2C8.1 7.2 7.5 7.6 7.5 8.2H6.2C6.2 6.8 7.4 5 9 5Z" fill="#8a6808"/></svg></div>
           <div class="wardrobe-balance-label">coins available</div>
-          <div class="wardrobe-balance-hint">Earn 10 coins per word mastered</div>
+          <div class="wardrobe-balance-hint">Earn 5 coins per word mastered</div>
         </div>
       </div>
       <div class="wardrobe-tabs">
@@ -265,6 +422,20 @@
         <button class="wardrobe-tab" data-tab="accessory">Accessories</button>
       </div>
       <div class="wardrobe-grid" id="wardrobeGrid"></div>
+    </div>
+
+    <!-- SCREEN: STREAK -->
+    <div class="screen" id="screen-streak">
+      <div class="streak-screen-header">
+        <button class="back-btn" id="streakBackBtn">← Back</button>
+        <h2 class="streak-screen-title">Pete Streak</h2>
+      </div>
+      <div class="streak-screen-body">
+        <div id="peteStreakScreen" class="streak-pete-wrap"></div>
+        <div class="streak-big-count"><span id="streakCount">0</span><span class="streak-big-label">day streak <svg width="22" height="28" viewBox="0 0 13 17" fill="none" style="vertical-align:middle"><path d="M6.5 1C8 3.5 10.5 6.5 10.5 10C10.5 13.2 8.8 15.5 6.5 16.5C4.2 15.5 2.5 13.2 2.5 10C2.5 7 4.5 4 5 2.5C5 4.5 6 6 6.5 6C7.3 4.5 8 2 6.5 1Z" fill="#e05818"/><path d="M6.5 12C6.5 12 8 11 8 9.5C8 9 7.5 9.5 6.5 10.5C5.5 9.5 5 9 5 9.5C5 11 6.5 12 6.5 12Z" fill="#f5c040"/></svg></span></div>
+        <p class="streak-screen-sub">Learn a new word every day to keep your streak alive and unlock rewards.</p>
+        <div class="streak-milestone-list" id="streakMilestoneList"></div>
+      </div>
     </div>
 
     <!-- SCREEN: HISTORY -->
@@ -281,9 +452,13 @@
 
   <div class="toast hidden" id="toast"></div>
 
-  <script src="words.js?v=7"></script>
-  <script src="quiz.js?v=7"></script>
-  <script src="pete.js?v=7"></script>
-  <script src="app.js?v=7"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase.js?v=6"></script>
+  <script src="words.js?v=9"></script>
+  <script src="quiz.js?v=9"></script>
+  <script src="pete.js?v=10"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>
