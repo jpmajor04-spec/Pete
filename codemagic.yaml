@@ -16,6 +16,10 @@ workflows:
         script: |
           npm install
           npm install @capacitor/core @capacitor/cli @capacitor/ios
+      - name: Copy web files to www
+        script: |
+          mkdir -p www
+          cp app.js firebase.js index.html pete.js quiz.js style.css words.js www/
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
