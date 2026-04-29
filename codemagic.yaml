@@ -5,6 +5,9 @@ workflows:
     integrations:
       app_store_connect: codemagic
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.jesse.peteapp
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
@@ -25,6 +28,7 @@ workflows:
           npx cap sync ios
       - name: Set up code signing
         script: |
+          keychain add-certificates
           xcode-project use-profiles
       - name: Build iOS
         script: |
