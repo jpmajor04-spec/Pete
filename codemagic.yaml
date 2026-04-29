@@ -7,7 +7,6 @@ workflows:
     environment:
       groups:
         - ios-credentials
-        - private-key
       vars:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
