@@ -267,6 +267,7 @@ function equipItem(id, type) {
   const equipped = getEquipped();
   equipped[type] = (equipped[type] === id) ? null : id; // toggle
   localStorage.setItem('pete_equipped', JSON.stringify(equipped));
+  if (typeof fbSaveEquipped === 'function') fbSaveEquipped(equipped);
   refreshAllPetes();
   renderWardrobeGrid(document.querySelector('.wardrobe-tab.active')?.dataset.tab || 'shirt');
   updateWardrobePreview();
@@ -1791,18 +1792,30 @@ function renderBattleChallenge() {
   const body = document.getElementById('battleBody');
   body.innerHTML = `
     <div class="battle-card">
-      <div class="battle-word-label">Your word</div>
-      <div class="battle-word">${word}</div>
-      <div class="battle-definition">${wordDefinition}</div>
-      <div class="battle-timer-row">
-        <div class="battle-timer" id="battleTimer">30</div>
-        <div class="battle-timer-label">seconds</div>
+      <div class="battle-vs-row">
+        <div class="battle-vs-you">You</div>
+        <div class="battle-vs-divider">vs</div>
+        <div class="battle-vs-opp">${battleState.opponentName}</div>
+      </div>
+      <div class="battle-word-section">
+        <div class="battle-word-label">Write a sentence using:</div>
+        <div class="battle-word">${word}</div>
+        <div class="battle-definition">${wordDefinition}</div>
+      </div>
+      <div class="battle-timer-wrap">
+        <svg class="battle-timer-ring" viewBox="0 0 44 44" width="64" height="64">
+          <circle cx="22" cy="22" r="18" fill="none" stroke="#e8ddd0" stroke-width="4"/>
+          <circle cx="22" cy="22" r="18" fill="none" stroke="#e8934a" stroke-width="4"
+            stroke-dasharray="113" stroke-dashoffset="0" id="battleTimerRing"
+            stroke-linecap="round" transform="rotate(-90 22 22)"/>
+        </svg>
+        <div class="battle-timer-num" id="battleTimer">30</div>
       </div>
       <textarea class="battle-sentence-input" id="battleSentenceInput"
-        placeholder="Write a sentence using '${word}'…"
-        rows="4" spellcheck="true" autocorrect="on"></textarea>
-      <div class="battle-char-count" id="battleCharCount">0 characters</div>
-      <button class="btn btn-primary battle-submit-btn" id="battleSubmitBtn" disabled>Submit →</button>
+        placeholder="Use '${word}' in your sentence…"
+        rows="3" spellcheck="true" autocorrect="on"></textarea>
+      <div class="battle-char-count" id="battleCharCount">0 / 10 words minimum</div>
+      <button class="btn btn-primary battle-submit-btn" id="battleSubmitBtn" disabled>Submit</button>
     </div>`;
 
   const input  = document.getElementById('battleSentenceInput');
@@ -1810,7 +1823,8 @@ function renderBattleChallenge() {
   const charCount = document.getElementById('battleCharCount');
 
   input.addEventListener('input', () => {
-    charCount.textContent = `${input.value.length} characters`;
+    const words = input.value.trim().split(/\s+/).filter(Boolean).length;
+    charCount.textContent = `${words} word${words !== 1 ? 's' : ''}`;
     submitBtn.disabled = input.value.trim().length < 5;
   });
   submitBtn.addEventListener('click', () => submitBattleSentence(input.value.trim()));
@@ -1820,8 +1834,14 @@ function renderBattleChallenge() {
   battleState.timerInterval = setInterval(() => {
     battleState.timeLeft--;
     const timerEl = document.getElementById('battleTimer');
+    const ring    = document.getElementById('battleTimerRing');
     const fill    = document.getElementById('battleProgressFill');
     if (timerEl) timerEl.textContent = battleState.timeLeft;
+    if (ring) {
+      const offset = 113 - (113 * (battleState.timeLeft / 30));
+      ring.setAttribute('stroke-dashoffset', offset);
+      if (battleState.timeLeft <= 10) ring.setAttribute('stroke', '#c83020');
+    }
     if (fill) fill.style.width = `${((30 - battleState.timeLeft) / 30) * 100}%`;
     if (timerEl && battleState.timeLeft <= 10) timerEl.classList.add('battle-timer-urgent');
     if (battleState.timeLeft <= 0) {
@@ -1995,7 +2015,7 @@ async function renderFriendCodeBar() {
     btn.disabled = true;
     msg.textContent = 'Sending…';
     msg.className = 'friend-add-msg';
-    const result = await fbSendFriendRequest(input.value);
+    const result = await fbSendFriendRequest(input.value.trim().toUpperCase());
     btn.disabled = false;
     if (result.ok) {
       msg.textContent = `Request sent to ${result.name}!`;
@@ -2048,11 +2068,14 @@ function renderLeaderboardTab(tab) {
         const isMe = e.id === myId;
         const score = `${e.streak || 0} day${(e.streak || 0) !== 1 ? 's' : ''}`;
         const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+        const wardrobe = isMe ? getEquipped() : (e.equipped || {});
+        const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
         const battleBtn = !isMe
-          ? `<button class="leaderboard-entry-battle-btn" data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}">⚔ Battle</button>`
+          ? `<button class="leaderboard-entry-battle-btn" data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}">Battle</button>`
           : '';
         return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}">
           <div class="rank-badge ${badgeClass}">${i + 1}</div>
+          <div class="lb-avatar">${avatar}</div>
           <div class="leaderboard-name">${e.displayName || 'Anonymous'}${isMe ? ' <span class="lb-you">(you)</span>' : ''}</div>
           <div class="leaderboard-score">${score}</div>
           ${battleBtn}
@@ -2107,8 +2130,11 @@ function renderLeaderboardTab(tab) {
       ? `${e.streak} day${e.streak !== 1 ? 's' : ''}`
       : `${e.totalStars || 0} ★`;
     const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const wardrobe = isMe ? getEquipped() : (e.equipped || {});
+    const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
     return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}">
       <div class="rank-badge ${badgeClass}">${i + 1}</div>
+      <div class="lb-avatar">${avatar}</div>
       <div class="leaderboard-name">${e.displayName || 'Anonymous'}${isMe ? ' <span class="lb-you">(you)</span>' : ''}</div>
       <div class="leaderboard-score">${score}</div>
     </div>`;
@@ -2184,281 +2210,292 @@ function equipHouseItem(id, type) {
 }
 
 function renderHouseSVG(eq) {
-  const wall = HOUSE_CATALOG.find(i => i.id === eq.wallpaper) || HOUSE_CATALOG[0];
-  const floor = HOUSE_CATALOG.find(i => i.id === eq.flooring) || HOUSE_CATALOG.find(i => i.type === 'flooring');
+  const wall  = HOUSE_CATALOG.find(i => i.id === eq.wallpaper) || HOUSE_CATALOG[0];
+  const floor = HOUSE_CATALOG.find(i => i.id === eq.flooring)  || HOUSE_CATALOG.find(i => i.type === 'flooring');
   const items = eq.items || [];
   const wallColor  = wall.color;
   const floorColor = floor.color;
 
-  // Build wallpaper SVG
+  // Wall pattern/fill
   let wallFill = `fill="${wallColor}"`;
-  let wallDefs = '';
+  let defs = '';
   if (wallColor === '#c8a040') {
-    // Gold: add subtle diamond pattern
-    wallDefs = `<defs><pattern id="hp_wall" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="${wallColor}"/><path d="M10 0L20 10L10 20L0 10Z" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/></pattern></defs>`;
+    defs += `<pattern id="hp_wall" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="${wallColor}"/><path d="M10 0L20 10L10 20L0 10Z" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/></pattern>`;
     wallFill = `fill="url(#hp_wall)"`;
   }
 
-  // Build floor SVG
+  // Floor pattern/fill
   let floorFill = `fill="${floorColor}"`;
-  let floorDefs = '';
   if (floorColor === 'tile') {
-    floorDefs = `<defs><pattern id="hp_floor" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#f0ebe0"/><rect x="12" y="12" width="12" height="12" fill="#f0ebe0"/><rect x="12" y="0" width="12" height="12" fill="#1c1208"/><rect x="0" y="12" width="12" height="12" fill="#1c1208"/></pattern></defs>`;
+    defs += `<pattern id="hp_floor" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="10" height="10" fill="#f0ebe0"/><rect x="10" y="10" width="10" height="10" fill="#f0ebe0"/><rect x="10" y="0" width="10" height="10" fill="#1c1208"/><rect x="0" y="10" width="10" height="10" fill="#1c1208"/></pattern>`;
     floorFill = `fill="url(#hp_floor)"`;
   } else if (floorColor === '#c8a060' || floorColor === '#5a3820') {
-    // Wood grain lines
-    const gc = floorColor === '#c8a060' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.15)';
-    floorDefs = `<defs><pattern id="hp_floor" x="0" y="0" width="40" height="8" patternUnits="userSpaceOnUse"><rect width="40" height="8" fill="${floorColor}"/><line x1="0" y1="4" x2="40" y2="4" stroke="${gc}" stroke-width="0.8"/></pattern></defs>`;
+    const gc = floorColor === '#c8a060' ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.12)';
+    defs += `<pattern id="hp_floor" x="0" y="0" width="40" height="10" patternUnits="userSpaceOnUse"><rect width="40" height="10" fill="${floorColor}"/><line x1="0" y1="5" x2="40" y2="5" stroke="${gc}" stroke-width="0.8"/></pattern>`;
+    floorFill = `fill="url(#hp_floor)"`;
+  } else if (floorColor === '#e8d8c0') {
+    defs += `<pattern id="hp_floor" x="0" y="0" width="30" height="30" patternUnits="userSpaceOnUse"><rect width="30" height="30" fill="${floorColor}"/><line x1="0" y1="15" x2="30" y2="15" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/><line x1="15" y1="0" x2="15" y2="30" stroke="rgba(0,0,0,0.06)" stroke-width="0.8"/></pattern>`;
     floorFill = `fill="url(#hp_floor)"`;
   }
 
   const has = id => items.includes(id);
 
-  // Items SVG
+  // Ceiling light/shadow gradient
+  defs += `<linearGradient id="wallShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(0,0,0,0.12)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></linearGradient>
+  <linearGradient id="floorShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(0,0,0,0.18)"/><stop offset="70%" stop-color="rgba(0,0,0,0.04)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></linearGradient>`;
+
+  // ── WALL ITEMS (hang on back wall, y < 155) ──────────────────────────────
+  const window_ = `
+    <rect x="126" y="14" width="68" height="60" fill="#87CEEB" rx="2" opacity="0.85"/>
+    <line x1="160" y1="14" x2="160" y2="74" stroke="white" stroke-width="2.5"/>
+    <line x1="126" y1="44" x2="194" y2="44" stroke="white" stroke-width="2.5"/>
+    <rect x="123" y="11" width="74" height="66" fill="none" stroke="#7a5228" stroke-width="4" rx="3"/>
+    <rect x="121" y="9" width="78" height="70" fill="none" stroke="#5c3a18" stroke-width="2" rx="4"/>`;
+
   const bookshelf = has('furn_bookshelf') ? `
-    <rect x="245" y="28" width="70" height="154" fill="#7a5228" rx="2"/>
-    <rect x="247" y="30" width="66" height="150" fill="#5c3a18"/>
-    <rect x="247" y="72" width="66" height="4" fill="#7a5228"/>
-    <rect x="247" y="114" width="66" height="4" fill="#7a5228"/>
-    <rect x="247" y="154" width="66" height="4" fill="#7a5228"/>
-    <rect x="249" y="32" width="7" height="39" fill="#b84c2a" rx="1"/>
-    <rect x="257" y="32" width="9" height="39" fill="#c8a010" rx="1"/>
-    <rect x="267" y="32" width="6" height="39" fill="#1a4a8a" rx="1"/>
-    <rect x="274" y="36" width="8" height="35" fill="#2a6e46" rx="1"/>
-    <rect x="283" y="32" width="7" height="39" fill="#8a3a80" rx="1"/>
-    <rect x="249" y="76" width="9" height="37" fill="#2a6e46" rx="1"/>
-    <rect x="259" y="76" width="6" height="37" fill="#b84c2a" rx="1"/>
-    <rect x="266" y="80" width="8" height="33" fill="#c8a010" rx="1"/>
-    <rect x="275" y="76" width="7" height="37" fill="#1a4a8a" rx="1"/>
-    <rect x="283" y="76" width="6" height="37" fill="#5c3a18" rx="1"/>
-    <rect x="249" y="118" width="8" height="35" fill="#1a4a8a" rx="1"/>
-    <rect x="258" y="118" width="6" height="35" fill="#8a3a80" rx="1"/>
-    <rect x="265" y="122" width="9" height="31" fill="#b84c2a" rx="1"/>
-    <rect x="275" y="118" width="7" height="35" fill="#2a6e46" rx="1"/>` : '';
-
-  const sofa = has('furn_sofa') ? `
-    <rect x="65" y="148" width="130" height="32" fill="#8a5c28" rx="4"/>
-    <rect x="65" y="142" width="130" height="16" fill="#a06c38" rx="3"/>
-    <rect x="65" y="142" width="12" height="38" fill="#7a4c20" rx="3"/>
-    <rect x="183" y="142" width="12" height="38" fill="#7a4c20" rx="3"/>
-    <rect x="73" y="148" width="38" height="24" fill="#b07840" rx="2"/>
-    <rect x="115" y="148" width="38" height="24" fill="#b07840" rx="2"/>
-    <rect x="157" y="148" width="30" height="24" fill="#b07840" rx="2"/>` : '';
-
-  const armchair = has('furn_armchair') ? `
-    <rect x="22" y="154" width="48" height="28" fill="#7a4c28" rx="3"/>
-    <rect x="22" y="148" width="48" height="14" fill="#8a5c38" rx="2"/>
-    <rect x="22" y="148" width="10" height="34" fill="#6a3c18" rx="2"/>
-    <rect x="60" y="148" width="10" height="34" fill="#6a3c18" rx="2"/>
-    <rect x="28" y="154" width="36" height="22" fill="#9a6c48" rx="2"/>` : '';
-
-  const desk = has('furn_desk') ? `
-    <rect x="178" y="148" width="62" height="8" fill="#8a5c28" rx="2"/>
-    <rect x="178" y="156" width="5" height="26" fill="#6a4218"/>
-    <rect x="235" y="156" width="5" height="26" fill="#6a4218"/>
-    <rect x="183" y="148" width="52" height="2" fill="#7a4c18"/>
-    ${has('dec_globe') ? `<ellipse cx="210" cy="143" rx="9" ry="9" fill="#1a4a8a"/><ellipse cx="210" cy="143" rx="9" ry="4" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/><line x1="210" y1="134" x2="210" y2="152" stroke="rgba(255,255,255,0.3)" stroke-width="0.8"/><rect x="207" y="151" width="6" height="2" fill="#5a3820" rx="1"/>` : ''}` : '';
-
-  const fireplace = has('furn_fireplace') ? `
-    <rect x="118" y="62" width="84" height="120" fill="#8a7060" rx="2"/>
-    <rect x="124" y="68" width="72" height="100" fill="#5c4030"/>
-    <rect x="130" y="74" width="60" height="88" fill="#2a1808"/>
-    <ellipse cx="160" cy="158" rx="28" ry="8" fill="#e05818" opacity="0.9"/>
-    <ellipse cx="160" cy="150" rx="20" ry="12" fill="#f5a020" opacity="0.85"/>
-    <ellipse cx="155" cy="140" rx="10" ry="16" fill="#f5c040" opacity="0.8"/>
-    <ellipse cx="165" cy="138" rx="8" ry="14" fill="#e05818" opacity="0.7"/>
-    <rect x="112" y="58" width="96" height="8" fill="#a09080" rx="1"/>` : '';
-
-  const rug = has('dec_rug') ? `
-    <rect x="60" y="176" width="180" height="14" fill="#7a1c1c" rx="3"/>
-    <rect x="65" y="178" width="170" height="10" fill="#922020" rx="2"/>
-    <rect x="70" y="179" width="160" height="8" fill="none" stroke="#c8a010" stroke-width="1.2"/>
-    <rect x="76" y="180" width="148" height="6" fill="#a82828"/>` : '';
-
-  const plant = has('dec_plant') ? `
-    <rect x="8" y="158" width="18" height="22" fill="#8a5c28" rx="2"/>
-    <rect x="10" y="156" width="14" height="4" fill="#6a3c18"/>
-    <ellipse cx="17" cy="148" rx="12" ry="14" fill="#2a6e46"/>
-    <ellipse cx="12" cy="152" rx="7" ry="9" fill="#38884"/>
-    <ellipse cx="22" cy="150" rx="8" ry="10" fill="#2a6e46"/>
-    <ellipse cx="17" cy="142" rx="6" ry="8" fill="#3a8058"/>` : '';
-
-  const lamp = has('dec_lamp') ? `
-    <line x1="202" y1="108" x2="202" y2="175" stroke="#8a6828" stroke-width="3"/>
-    <ellipse cx="202" cy="107" rx="14" ry="7" fill="#c8a010"/>
-    <polygon points="188,108 216,108 210,90 194,90" fill="#e8c020" opacity="0.9"/>
-    <ellipse cx="202" cy="175" rx="8" ry="3" fill="#6a4818"/>` : '';
+    <rect x="4" y="10" width="58" height="148" fill="#7a5228" rx="2"/>
+    <rect x="6" y="12" width="54" height="144" fill="#4a2c10"/>
+    <rect x="6" y="55" width="54" height="4" fill="#7a5228"/><rect x="6" y="97" width="54" height="4" fill="#7a5228"/><rect x="6" y="138" width="54" height="4" fill="#7a5228"/>
+    <rect x="8" y="14" width="6" height="40" fill="#b84c2a" rx="1"/><rect x="15" y="14" width="8" height="40" fill="#c8a010" rx="1"/><rect x="24" y="14" width="6" height="40" fill="#1a4a8a" rx="1"/><rect x="31" y="18" width="7" height="36" fill="#2a6e46" rx="1"/><rect x="39" y="14" width="6" height="40" fill="#8a3a80" rx="1"/><rect x="46" y="14" width="7" height="40" fill="#b84c2a" rx="1"/>
+    <rect x="8" y="59" width="8" height="37" fill="#2a6e46" rx="1"/><rect x="17" y="59" width="6" height="37" fill="#b84c2a" rx="1"/><rect x="24" y="63" width="7" height="33" fill="#c8a010" rx="1"/><rect x="32" y="59" width="6" height="37" fill="#1a4a8a" rx="1"/><rect x="39" y="59" width="8" height="37" fill="#5c3a18" rx="1"/>
+    <rect x="8" y="101" width="7" height="36" fill="#1a4a8a" rx="1"/><rect x="16" y="101" width="6" height="36" fill="#8a3a80" rx="1"/><rect x="23" y="105" width="8" height="32" fill="#b84c2a" rx="1"/><rect x="32" y="101" width="6" height="36" fill="#2a6e46" rx="1"/><rect x="39" y="101" width="8" height="36" fill="#c8a010" rx="1"/>` : '';
 
   const painting = has('dec_painting') ? `
-    <rect x="108" y="12" width="54" height="42" fill="#5c4030" rx="2"/>
-    <rect x="111" y="15" width="48" height="36" fill="#a06040"/>
-    <ellipse cx="135" cy="27" rx="10" ry="8" fill="#87CEEB" opacity="0.7"/>
-    <rect x="115" y="30" width="40" height="18" fill="#8a6030"/>
-    <ellipse cx="135" cy="29" rx="6" ry="5" fill="#f0a850"/>` : '';
+    <rect x="82" y="12" width="56" height="44" fill="#5c4030" rx="2"/>
+    <rect x="85" y="15" width="50" height="38" fill="#a06040"/>
+    <rect x="88" y="18" width="44" height="32" fill="#87CEEB" opacity="0.5"/>
+    <ellipse cx="110" cy="28" rx="10" ry="8" fill="#f0a850" opacity="0.8"/>
+    <rect x="88" y="32" width="44" height="18" fill="#5a8030" opacity="0.6"/>` : '';
 
   const clock = has('dec_clock') ? `
-    <rect x="204" y="12" width="24" height="58" fill="#6a4218" rx="3"/>
-    <rect x="206" y="14" width="20" height="54" fill="#5a3210" rx="2"/>
-    <circle cx="216" cy="30" r="9" fill="#f5f0e0" stroke="#8a5c28" stroke-width="1.5"/>
-    <line x1="216" y1="25" x2="216" y2="30" stroke="#1c1208" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="216" y1="30" x2="220" y2="33" stroke="#1c1208" stroke-width="1" stroke-linecap="round"/>
-    <rect x="213" y="44" width="6" height="18" fill="#6a4218" rx="2"/>` : '';
+    <rect x="204" y="10" width="24" height="60" fill="#6a4218" rx="3"/>
+    <rect x="206" y="12" width="20" height="56" fill="#5a3210" rx="2"/>
+    <circle cx="216" cy="28" r="10" fill="#f5f0e0" stroke="#8a5c28" stroke-width="1.5"/>
+    <line x1="216" y1="22" x2="216" y2="28" stroke="#1c1208" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="216" y1="28" x2="221" y2="31" stroke="#1c1208" stroke-width="1" stroke-linecap="round"/>
+    <circle cx="216" cy="28" r="1.5" fill="#1c1208"/>
+    <rect x="213" y="44" width="6" height="20" fill="#6a4218" rx="2"/>` : '';
 
   const trophy = has('dec_trophy') ? `
-    <rect x="252" y="83" width="22" height="28" fill="#c8a010" rx="2"/>
-    <ellipse cx="263" cy="84" rx="11" ry="8" fill="#d4b828"/>
-    <rect x="259" y="108" width="8" height="4" fill="#c8a010"/>
-    <rect x="255" y="112" width="16" height="3" fill="#8a6808" rx="1"/>
-    <path d="M252 90 Q245 95 248 103 Q252 108 252 90Z" fill="#c8a010"/>
-    <path d="M274 90 Q281 95 278 103 Q274 108 274 90Z" fill="#c8a010"/>` : '';
-
-  const piano = has('furn_piano') ? `
-    <rect x="88" y="118" width="56" height="67" fill="#1a1008" rx="2"/>
-    <rect x="90" y="120" width="52" height="60" fill="#2a1a0a"/>
-    <rect x="86" y="114" width="60" height="7" fill="#1a1008" rx="1"/>
-    <rect x="90" y="178" width="52" height="7" fill="#f5f0e8"/>
-    <rect x="97" y="178" width="1.5" height="6" fill="#c0b8a8"/>
-    <rect x="104" y="178" width="1.5" height="6" fill="#c0b8a8"/>
-    <rect x="111" y="178" width="1.5" height="6" fill="#c0b8a8"/>
-    <rect x="118" y="178" width="1.5" height="6" fill="#c0b8a8"/>
-    <rect x="125" y="178" width="1.5" height="6" fill="#c0b8a8"/>
-    <rect x="132" y="178" width="1.5" height="6" fill="#c0b8a8"/>
-    <rect x="93" y="178" width="5" height="4.5" fill="#1a1008" rx="0.5"/>
-    <rect x="100" y="178" width="5" height="4.5" fill="#1a1008" rx="0.5"/>
-    <rect x="114" y="178" width="5" height="4.5" fill="#1a1008" rx="0.5"/>
-    <rect x="121" y="178" width="5" height="4.5" fill="#1a1008" rx="0.5"/>
-    <rect x="128" y="178" width="5" height="4.5" fill="#1a1008" rx="0.5"/>` : '';
-
-  const trampoline = has('furn_trampoline') ? `
-    <ellipse cx="170" cy="174" rx="46" ry="10" fill="#5c3a18" stroke="#3c2008" stroke-width="2"/>
-    <ellipse cx="170" cy="174" rx="38" ry="7" fill="#3a7a5c"/>
-    <ellipse cx="170" cy="174" rx="32" ry="5" fill="#4a8a6c" opacity="0.6"/>
-    <line x1="126" y1="174" x2="122" y2="190" stroke="#3c2008" stroke-width="2.5"/>
-    <line x1="214" y1="174" x2="218" y2="190" stroke="#3c2008" stroke-width="2.5"/>
-    <line x1="148" y1="181" x2="145" y2="190" stroke="#3c2008" stroke-width="2"/>
-    <line x1="192" y1="181" x2="195" y2="190" stroke="#3c2008" stroke-width="2"/>` : '';
-
-  const pooltable = has('furn_pooltable') ? `
-    <rect x="66" y="152" width="132" height="33" fill="#5c3010" rx="4"/>
-    <rect x="70" y="155" width="124" height="27" fill="#2a7050" rx="2"/>
-    <rect x="70" y="155" width="124" height="4" fill="#1e5438"/>
-    <circle cx="132" cy="169" r="4.5" fill="white" stroke="#ccc" stroke-width="0.5"/>
-    <circle cx="150" cy="163" r="3.5" fill="#e02820"/>
-    <circle cx="158" cy="169" r="3.5" fill="#f5c020"/>
-    <circle cx="150" cy="175" r="3.5" fill="#1a4a8a"/>
-    <circle cx="165" cy="163" r="3.5" fill="#2a6e3a"/>
-    <line x1="110" y1="169" x2="132" y2="169" stroke="#a08860" stroke-width="1.5" stroke-linecap="round"/>
-    <rect x="66" y="185" width="9" height="5" fill="#3c1c08"/>
-    <rect x="189" y="185" width="9" height="5" fill="#3c1c08"/>` : '';
-
-  const arcade = has('furn_arcade') ? `
-    <rect x="224" y="95" width="38" height="90" fill="#1a2a5c" rx="3"/>
-    <rect x="226" y="98" width="34" height="42" fill="#0a1028" rx="2"/>
-    <rect x="228" y="100" width="30" height="38" fill="#102060"/>
-    <text x="243" y="115" font-size="6" fill="#00ff88" text-anchor="middle" font-family="monospace">PLAY</text>
-    <text x="243" y="124" font-size="5" fill="#00cc66" text-anchor="middle" font-family="monospace">SCORE</text>
-    <text x="243" y="132" font-size="6" fill="#ffff00" text-anchor="middle" font-family="monospace">9999</text>
-    <rect x="228" y="148" width="11" height="11" fill="#8a2020" rx="5.5"/>
-    <rect x="243" y="148" width="11" height="11" fill="#20208a" rx="5.5"/>
-    <circle cx="236" cy="165" r="6" fill="#3a2a10"/>
-    <circle cx="236" cy="162" r="3" fill="#c8a010"/>` : '';
-
-  const fishtank = has('dec_fishtank') ? `
-    <rect x="5" y="130" width="58" height="52" fill="#90c0d8" rx="3" opacity="0.85"/>
-    <rect x="5" y="130" width="58" height="52" fill="none" stroke="#4a7a90" stroke-width="2.5" rx="3"/>
-    <rect x="5" y="175" width="58" height="7" fill="#2a5820" rx="2"/>
-    <ellipse cx="23" cy="152" rx="8" ry="5" fill="#f59020" opacity="0.9"/>
-    <polygon points="15,152 23,147 23,157" fill="#e07010" opacity="0.9"/>
-    <ellipse cx="42" cy="160" rx="6" ry="4" fill="#c040a0" opacity="0.9"/>
-    <polygon points="36,160 42,156 42,164" fill="#a02880" opacity="0.9"/>
-    <rect x="8" y="174" width="14" height="3" fill="#2a6e46" rx="1" opacity="0.8"/>
-    <rect x="30" y="170" width="9" height="5" fill="#2a6e46" rx="1" opacity="0.8"/>` : '';
+    <rect x="248" y="82" width="24" height="30" fill="#c8a010" rx="2"/>
+    <ellipse cx="260" cy="83" rx="12" ry="9" fill="#d4b828"/>
+    <rect x="256" y="110" width="8" height="5" fill="#c8a010"/>
+    <rect x="252" y="115" width="16" height="3" fill="#8a6808" rx="1"/>
+    <path d="M248 92 Q240 98 244 108 Q248 113 248 92Z" fill="#c8a010"/>
+    <path d="M272 92 Q280 98 276 108 Q272 113 272 92Z" fill="#c8a010"/>
+    <text x="260" y="102" font-size="9" fill="#8a6808" text-anchor="middle" font-weight="bold">1</text>` : '';
 
   const disco = has('dec_disco') ? `
-    <line x1="160" y1="0" x2="160" y2="13" stroke="#888" stroke-width="1.5"/>
-    <circle cx="160" cy="20" r="9" fill="#b8b8b8" stroke="#888" stroke-width="1"/>
-    <rect x="153" y="13" width="5" height="5" fill="#88ccff" opacity="0.9" rx="1"/>
-    <rect x="162" y="13" width="5" height="5" fill="#ff88cc" opacity="0.9" rx="1"/>
-    <rect x="153" y="22" width="5" height="5" fill="#ffcc44" opacity="0.9" rx="1"/>
-    <rect x="162" y="22" width="5" height="5" fill="#88ffcc" opacity="0.9" rx="1"/>
-    <line x1="160" y1="29" x2="140" y2="65" stroke="#88ccff" stroke-width="1" opacity="0.5"/>
-    <line x1="160" y1="29" x2="178" y2="60" stroke="#ff88cc" stroke-width="1" opacity="0.5"/>
-    <line x1="160" y1="29" x2="125" y2="55" stroke="#ffcc44" stroke-width="1" opacity="0.5"/>
-    <line x1="160" y1="29" x2="195" y2="52" stroke="#88ffcc" stroke-width="1" opacity="0.5"/>` : '';
+    <line x1="160" y1="0" x2="160" y2="16" stroke="#888" stroke-width="1.5"/>
+    <circle cx="160" cy="22" r="10" fill="#c0c0c0" stroke="#909090" stroke-width="1"/>
+    <rect x="153" y="15" width="4" height="4" fill="#88ccff" rx="0.5" opacity="0.9"/>
+    <rect x="159" y="15" width="4" height="4" fill="#ff88cc" rx="0.5" opacity="0.9"/>
+    <rect x="153" y="22" width="4" height="4" fill="#ffcc44" rx="0.5" opacity="0.9"/>
+    <rect x="159" y="22" width="4" height="4" fill="#88ffcc" rx="0.5" opacity="0.9"/>
+    <line x1="160" y1="32" x2="136" y2="72" stroke="#88ccff" stroke-width="1" opacity="0.45"/>
+    <line x1="160" y1="32" x2="182" y2="68" stroke="#ff88cc" stroke-width="1" opacity="0.45"/>
+    <line x1="160" y1="32" x2="116" y2="62" stroke="#ffcc44" stroke-width="1" opacity="0.45"/>
+    <line x1="160" y1="32" x2="200" y2="60" stroke="#88ffcc" stroke-width="1" opacity="0.45"/>` : '';
+
+  const arcade = has('furn_arcade') ? `
+    <rect x="255" y="52" width="40" height="106" fill="#1a2a5c" rx="3"/>
+    <rect x="257" y="55" width="36" height="44" fill="#0a1028" rx="2"/>
+    <rect x="259" y="57" width="32" height="40" fill="#102060"/>
+    <text x="275" y="70" font-size="6" fill="#00ff88" text-anchor="middle" font-family="monospace">PLAY</text>
+    <text x="275" y="80" font-size="5" fill="#00cc66" text-anchor="middle" font-family="monospace">SCORE</text>
+    <text x="275" y="90" font-size="7" fill="#ffff00" text-anchor="middle" font-family="monospace">9999</text>
+    <rect x="259" y="106" width="12" height="12" fill="#8a2020" rx="6"/>
+    <rect x="275" y="106" width="12" height="12" fill="#20208a" rx="6"/>
+    <circle cx="266" cy="130" r="7" fill="#3a2a10"/>
+    <circle cx="266" cy="127" r="4" fill="#c8a010"/>` : '';
+
+  const fireplace = has('furn_fireplace') ? `
+    <rect x="108" y="68" width="84" height="90" fill="#9a8070" rx="2"/>
+    <rect x="114" y="74" width="72" height="78" fill="#6a5040"/>
+    <rect x="120" y="80" width="60" height="66" fill="#2a1808"/>
+    <rect x="104" y="62" width="92" height="10" fill="#b09080" rx="1"/>
+    <rect x="108" y="68" width="4" height="90" fill="rgba(0,0,0,0.15)"/>
+    <ellipse cx="150" cy="144" rx="26" ry="6" fill="#e05818" opacity="0.85"/>
+    <ellipse cx="150" cy="137" rx="18" ry="10" fill="#f5a020" opacity="0.8"/>
+    <ellipse cx="145" cy="127" rx="10" ry="14" fill="#f5c040" opacity="0.75"/>
+    <ellipse cx="155" cy="125" rx="8" ry="12" fill="#e05818" opacity="0.65"/>` : '';
+
+  // ── FLOOR ITEMS (on the floor, layered back to front) ─────────────────────
+  // Back row (against skirting board, y≈148-170)
+  const sofa = has('furn_sofa') ? `
+    <rect x="60" y="138" width="140" height="8" fill="#6a3c18" rx="2"/>
+    <rect x="60" y="138" width="140" height="28" fill="#9a6c38" rx="3"/>
+    <rect x="60" y="134" width="140" height="14" fill="#b07840" rx="3"/>
+    <rect x="60" y="134" width="12" height="32" fill="#7a4c20" rx="3"/>
+    <rect x="188" y="134" width="12" height="32" fill="#7a4c20" rx="3"/>
+    <rect x="68" y="140" width="38" height="22" fill="#c08850" rx="2"/>
+    <rect x="111" y="140" width="38" height="22" fill="#c08850" rx="2"/>
+    <rect x="154" y="140" width="30" height="22" fill="#c08850" rx="2"/>
+    <rect x="60" y="162" width="140" height="4" fill="#6a3c18" rx="1"/>` : '';
+
+  const piano = has('furn_piano') ? `
+    <rect x="66" y="126" width="58" height="40" fill="#1a1008" rx="2"/>
+    <rect x="68" y="128" width="54" height="34" fill="#2a1a0a"/>
+    <rect x="64" y="122" width="62" height="7" fill="#1a1008" rx="1"/>
+    <rect x="64" y="162" width="62" height="4" fill="#f5f0e8"/>
+    <rect x="72" y="162" width="1.5" height="3.5" fill="#c0b8a8"/>
+    <rect x="79" y="162" width="1.5" height="3.5" fill="#c0b8a8"/>
+    <rect x="86" y="162" width="1.5" height="3.5" fill="#c0b8a8"/>
+    <rect x="93" y="162" width="1.5" height="3.5" fill="#c0b8a8"/>
+    <rect x="100" y="162" width="1.5" height="3.5" fill="#c0b8a8"/>
+    <rect x="107" y="162" width="1.5" height="3.5" fill="#c0b8a8"/>
+    <rect x="68" y="162" width="5" height="3" fill="#1a1008" rx="0.5"/>
+    <rect x="75" y="162" width="5" height="3" fill="#1a1008" rx="0.5"/>
+    <rect x="89" y="162" width="5" height="3" fill="#1a1008" rx="0.5"/>
+    <rect x="96" y="162" width="5" height="3" fill="#1a1008" rx="0.5"/>
+    <rect x="103" y="162" width="5" height="3" fill="#1a1008" rx="0.5"/>
+    <rect x="68" y="166" width="3" height="12" fill="#3a2010"/><rect x="116" y="166" width="3" height="12" fill="#3a2010"/>` : '';
+
+  const desk = has('furn_desk') ? `
+    <rect x="205" y="136" width="72" height="8" fill="#8a5c28" rx="2"/>
+    <rect x="205" y="144" width="5" height="22" fill="#6a4218"/>
+    <rect x="272" y="144" width="5" height="22" fill="#6a4218"/>
+    <rect x="210" y="136" width="62" height="3" fill="#a06c38"/>
+    ${has('dec_globe') ? `<ellipse cx="240" cy="131" rx="9" ry="9" fill="#1a4a8a"/><path d="M231 131 Q240 125 249 131 Q240 137 231 131Z" fill="#2a6e8a" opacity="0.6"/><line x1="240" y1="122" x2="240" y2="140" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/><line x1="231" y1="131" x2="249" y2="131" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/><rect x="237" y="139" width="6" height="2" fill="#5a3820" rx="1"/>` : ''}` : '';
+
+  // Mid floor items (y≈165-195)
+  const armchair = has('furn_armchair') ? `
+    <rect x="14" y="158" width="52" height="30" fill="#7a4c28" rx="3"/>
+    <rect x="14" y="152" width="52" height="14" fill="#8a5c38" rx="2"/>
+    <rect x="14" y="152" width="11" height="36" fill="#6a3c18" rx="2"/>
+    <rect x="55" y="152" width="11" height="36" fill="#6a3c18" rx="2"/>
+    <rect x="20" y="160" width="38" height="24" fill="#9a6c48" rx="2"/>
+    <rect x="14" y="185" width="12" height="5" fill="#4a2c10" rx="1"/>
+    <rect x="54" y="185" width="12" height="5" fill="#4a2c10" rx="1"/>` : '';
+
+  const pooltable = has('furn_pooltable') ? `
+    <rect x="64" y="158" width="136" height="36" fill="#5c3010" rx="4"/>
+    <rect x="68" y="162" width="128" height="28" fill="#2a7050" rx="2"/>
+    <rect x="68" y="162" width="128" height="5" fill="#1e5438"/>
+    <circle cx="132" cy="178" r="5" fill="white" stroke="#ddd" stroke-width="0.5"/>
+    <circle cx="152" cy="171" r="4" fill="#e02820"/>
+    <circle cx="161" cy="178" r="4" fill="#f5c020"/>
+    <circle cx="152" cy="185" r="4" fill="#1a4a8a"/>
+    <circle cx="169" cy="171" r="4" fill="#2a6e3a"/>
+    <circle cx="169" cy="185" r="4" fill="#8a2880"/>
+    <line x1="108" y1="178" x2="132" y2="178" stroke="#a08860" stroke-width="2" stroke-linecap="round"/>
+    <rect x="64" y="190" width="11" height="6" fill="#3c1c08" rx="1"/>
+    <rect x="189" y="190" width="11" height="6" fill="#3c1c08" rx="1"/>` : '';
+
+  const trampoline = has('furn_trampoline') ? `
+    <ellipse cx="220" cy="184" rx="52" ry="12" fill="#5c3a18" stroke="#3c2008" stroke-width="2"/>
+    <ellipse cx="220" cy="184" rx="42" ry="8" fill="#3a7a5c"/>
+    <ellipse cx="220" cy="184" rx="34" ry="5.5" fill="#4a8a6c" opacity="0.6"/>
+    <line x1="168" y1="184" x2="162" y2="200" stroke="#3c2008" stroke-width="3"/>
+    <line x1="272" y1="184" x2="278" y2="200" stroke="#3c2008" stroke-width="3"/>
+    <line x1="192" y1="192" x2="188" y2="204" stroke="#3c2008" stroke-width="2"/>
+    <line x1="248" y1="192" x2="252" y2="204" stroke="#3c2008" stroke-width="2"/>` : '';
+
+  // Decor items
+  const fishtank = has('dec_fishtank') ? `
+    <rect x="233" y="120" width="62" height="52" fill="#90c0d8" rx="3" opacity="0.82"/>
+    <rect x="233" y="120" width="62" height="52" fill="none" stroke="#4a7a90" stroke-width="2.5" rx="3"/>
+    <rect x="233" y="165" width="62" height="7" fill="#2a5820" rx="2"/>
+    <ellipse cx="252" cy="144" rx="8" ry="5" fill="#f59020" opacity="0.9"/>
+    <polygon points="244,144 252,139 252,149" fill="#e07010" opacity="0.9"/>
+    <ellipse cx="272" cy="152" rx="7" ry="4.5" fill="#c040a0" opacity="0.9"/>
+    <polygon points="265,152 272,148 272,156" fill="#a02880" opacity="0.9"/>
+    <rect x="236" y="163" width="14" height="4" fill="#2a6e46" rx="1" opacity="0.8"/>
+    <rect x="258" y="159" width="10" height="6" fill="#2a6e46" rx="1" opacity="0.8"/>` : '';
+
+  const lamp = has('dec_lamp') ? `
+    <polygon points="199,78 223,78 218,62 204,62" fill="#e8c020" opacity="0.92"/>
+    <ellipse cx="211" cy="78" rx="12" ry="5" fill="#c8a010"/>
+    <line x1="211" y1="83" x2="211" y2="148" stroke="#8a6828" stroke-width="3"/>
+    <ellipse cx="211" cy="150" rx="8" ry="3" fill="#6a4818"/>` : '';
+
+  const plant = has('dec_plant') ? `
+    <rect x="5" y="156" width="20" height="24" fill="#8a5c28" rx="2"/>
+    <rect x="7" y="153" width="16" height="5" fill="#6a3c18"/>
+    <ellipse cx="15" cy="142" rx="13" ry="15" fill="#2a6e46"/>
+    <ellipse cx="9" cy="148" rx="8" ry="10" fill="#388844"/>
+    <ellipse cx="21" cy="146" rx="9" ry="11" fill="#2a6e46"/>
+    <ellipse cx="15" cy="135" rx="7" ry="9" fill="#3a8058"/>` : '';
+
+  // Foreground items (y≈185-215)
+  const rug = has('dec_rug') ? `
+    <ellipse cx="160" cy="210" rx="100" ry="16" fill="#7a1c1c" opacity="0.9"/>
+    <ellipse cx="160" cy="210" rx="88" ry="12" fill="#922020" opacity="0.9"/>
+    <ellipse cx="160" cy="210" rx="76" ry="9" fill="none" stroke="#c8a010" stroke-width="1.5"/>
+    <ellipse cx="160" cy="210" rx="64" ry="6" fill="#a82828" opacity="0.7"/>` : '';
 
   const beanbag = has('dec_beanbag') ? `
-    <ellipse cx="216" cy="179" rx="24" ry="10" fill="#b83030"/>
-    <ellipse cx="216" cy="171" rx="19" ry="15" fill="#c83838"/>
-    <ellipse cx="212" cy="167" rx="10" ry="8" fill="#d84848" opacity="0.6"/>` : '';
+    <ellipse cx="250" cy="210" rx="28" ry="11" fill="#b83030"/>
+    <ellipse cx="250" cy="200" rx="22" ry="18" fill="#c83838"/>
+    <ellipse cx="245" cy="195" rx="12" ry="10" fill="#d84848" opacity="0.55"/>` : '';
 
   const petCat = has('pet_cat') ? `
-    <ellipse cx="126" cy="181" rx="13" ry="7" fill="#c8a060"/>
-    <circle cx="126" cy="171" r="8" fill="#c8a060"/>
-    <polygon points="120,165 122,158 126,165" fill="#c8a060"/>
-    <polygon points="126,165 130,158 132,165" fill="#c8a060"/>
-    <ellipse cx="123" cy="171" rx="2.2" ry="2.8" fill="#2a1808"/>
-    <ellipse cx="129" cy="171" rx="2.2" ry="2.8" fill="#2a1808"/>
-    <ellipse cx="126" cy="174" rx="2" ry="1.5" fill="#e09080"/>
-    <path d="M121 174 Q118 172 115 174" stroke="#7a5030" stroke-width="0.8" fill="none"/>
-    <path d="M131 174 Q134 172 137 174" stroke="#7a5030" stroke-width="0.8" fill="none"/>
-    <path d="M137 180 Q144 173 141 181" stroke="#c8a060" stroke-width="2.5" fill="none" stroke-linecap="round"/>` : '';
+    <ellipse cx="168" cy="209" rx="15" ry="7" fill="#c8a060"/>
+    <circle cx="168" cy="198" r="10" fill="#c8a060"/>
+    <polygon points="161,191 163,183 168,191" fill="#c8a060"/>
+    <polygon points="168,191 173,183 175,191" fill="#c8a060"/>
+    <ellipse cx="164" cy="198" rx="2.5" ry="3" fill="#2a1808"/>
+    <ellipse cx="172" cy="198" rx="2.5" ry="3" fill="#2a1808"/>
+    <ellipse cx="168" cy="202" rx="2.2" ry="1.8" fill="#e09080"/>
+    <path d="M163 202 Q159 200 156 202" stroke="#7a5030" stroke-width="0.8" fill="none"/>
+    <path d="M173 202 Q177 200 180 202" stroke="#7a5030" stroke-width="0.8" fill="none"/>
+    <path d="M180 207 Q188 199 184 208" stroke="#c8a060" stroke-width="2.5" fill="none" stroke-linecap="round"/>` : '';
 
   const petDog = has('pet_dog') ? `
-    <ellipse cx="108" cy="180" rx="14" ry="7" fill="#c89050"/>
-    <circle cx="108" cy="170" r="8" fill="#c89050"/>
-    <ellipse cx="101" cy="167" rx="4" ry="6" fill="#b07840" rx="2"/>
-    <ellipse cx="115" cy="167" rx="4" ry="6" fill="#b07840" rx="2"/>
-    <ellipse cx="105" cy="171" rx="2.2" ry="2.8" fill="#2a1808"/>
-    <ellipse cx="111" cy="171" rx="2.2" ry="2.8" fill="#2a1808"/>
-    <ellipse cx="108" cy="175" rx="3" ry="2.2" fill="#e09080"/>
-    <path d="M104 175 Q100 173 97 175" stroke="#7a5030" stroke-width="0.8" fill="none"/>
-    <path d="M112 175 Q116 173 119 175" stroke="#7a5030" stroke-width="0.8" fill="none"/>
-    <path d="M120 178 Q126 182 122 185" stroke="#c89050" stroke-width="2.5" fill="none" stroke-linecap="round"/>` : '';
+    <ellipse cx="144" cy="210" rx="16" ry="7" fill="#c89050"/>
+    <circle cx="144" cy="199" r="10" fill="#c89050"/>
+    <ellipse cx="136" cy="196" rx="4.5" ry="7" fill="#b07840"/>
+    <ellipse cx="152" cy="196" rx="4.5" ry="7" fill="#b07840"/>
+    <ellipse cx="140" cy="200" rx="2.5" ry="3" fill="#2a1808"/>
+    <ellipse cx="148" cy="200" rx="2.5" ry="3" fill="#2a1808"/>
+    <ellipse cx="144" cy="204" rx="3" ry="2.2" fill="#e09080"/>
+    <path d="M140 204 Q136 202 133 204" stroke="#7a5030" stroke-width="0.8" fill="none"/>
+    <path d="M148 204 Q152 202 155 204" stroke="#7a5030" stroke-width="0.8" fill="none"/>
+    <path d="M157 208 Q164 213 160 216" stroke="#c89050" stroke-width="2.5" fill="none" stroke-linecap="round"/>` : '';
 
   const petParrot = has('pet_parrot') ? `
-    <line x1="250" y1="60" x2="268" y2="60" stroke="#5a3820" stroke-width="2.5"/>
-    <circle cx="256" cy="52" r="7.5" fill="#2a9a2a"/>
-    <ellipse cx="256" cy="62" rx="5.5" ry="8" fill="#38a838"/>
-    <ellipse cx="253" cy="50" rx="2" ry="2.5" fill="#1a1008"/>
-    <path d="M254 56 L250 58 L254 60" fill="#c8a010"/>
-    <rect x="250" y="60" width="3" height="5" fill="#c88020"/>
-    <rect x="261" y="60" width="3" height="5" fill="#c88020"/>
-    <path d="M262 56 Q270 50 268 60" stroke="#f04020" stroke-width="2" fill="none" stroke-linecap="round"/>` : '';
+    <line x1="270" y1="128" x2="292" y2="128" stroke="#5a3820" stroke-width="3"/>
+    <circle cx="278" cy="118" r="9" fill="#2a9a2a"/>
+    <ellipse cx="278" cy="130" rx="7" ry="10" fill="#38a838"/>
+    <ellipse cx="275" cy="116" rx="2.2" ry="2.8" fill="#1a1008"/>
+    <path d="M276 122 L271 125 L276 128" fill="#c8a010"/>
+    <rect x="271" y="128" width="4" height="6" fill="#c88020"/>
+    <rect x="285" y="128" width="4" height="6" fill="#c88020"/>
+    <ellipse cx="278" cy="112" rx="4" ry="3" fill="#f5c020" opacity="0.6"/>` : '';
 
   const petHamster = has('pet_hamster') ? `
-    <ellipse cx="56" cy="181" rx="10" ry="6" fill="#e0b870"/>
-    <circle cx="56" cy="174" r="7" fill="#e0b870"/>
-    <ellipse cx="53" cy="172" rx="1.8" ry="2.2" fill="#2a1808"/>
-    <ellipse cx="59" cy="172" rx="1.8" ry="2.2" fill="#2a1808"/>
-    <ellipse cx="56" cy="175" rx="2.2" ry="1.8" fill="#e09080"/>
-    <ellipse cx="49" cy="173" rx="3.5" ry="2.5" fill="#f0c888" opacity="0.75"/>
-    <ellipse cx="63" cy="173" rx="3.5" ry="2.5" fill="#f0c888" opacity="0.75"/>` : '';
+    <ellipse cx="202" cy="212" rx="14" ry="7" fill="#e8b880"/>
+    <circle cx="202" cy="202" r="11" fill="#e8b880"/>
+    <ellipse cx="193" cy="204" rx="6" ry="7" fill="#f0c890"/>
+    <ellipse cx="211" cy="204" rx="6" ry="7" fill="#f0c890"/>
+    <ellipse cx="198" cy="202" rx="2.2" ry="2.5" fill="#2a1808"/>
+    <ellipse cx="206" cy="202" rx="2.2" ry="2.5" fill="#2a1808"/>
+    <ellipse cx="202" cy="206" rx="2.5" ry="1.8" fill="#e09080"/>
+    <ellipse cx="196" cy="208" rx="4" ry="3" fill="#f5d0a0" opacity="0.7"/>
+    <ellipse cx="208" cy="208" rx="4" ry="3" fill="#f5d0a0" opacity="0.7"/>` : '';
 
-  // Window (always shown)
-  const window_ = `
-    <rect x="18" y="24" width="66" height="90" fill="#b8d8e8" rx="4"/>
-    <rect x="18" y="24" width="66" height="90" fill="none" stroke="#a09070" stroke-width="3" rx="4"/>
-    <line x1="51" y1="24" x2="51" y2="114" stroke="#a09070" stroke-width="2"/>
-    <line x1="18" y1="69" x2="84" y2="69" stroke="#a09070" stroke-width="2"/>
-    <rect x="21" y="27" width="28" height="40" fill="rgba(200,230,255,0.5)"/>
-    <rect x="53" y="27" width="28" height="40" fill="rgba(200,230,255,0.4)"/>`;
-
-  // Crown molding + baseboard
-  const trim = `
-    <rect x="0" y="0" width="320" height="8" fill="rgba(255,255,255,0.25)"/>
-    <rect x="0" y="180" width="320" height="5" fill="rgba(0,0,0,0.12)"/>`;
+  // Baseboard / skirting
+  const baseboard = `<rect x="0" y="155" width="320" height="8" fill="#d4b898" rx="0"/>
+    <rect x="0" y="155" width="320" height="2" fill="#f0e4d0"/>
+    <rect x="0" y="161" width="320" height="2" fill="#b09070"/>`;
 
   return `<svg viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;border-radius:12px">
-  ${wallDefs}${floorDefs}
-  <rect x="0" y="0" width="320" height="185" ${wallFill}/>
-  <rect x="0" y="185" width="320" height="55" ${floorFill}/>
-  ${trim}
+  <defs>${defs}</defs>
+  <!-- Wall -->
+  <rect x="0" y="0" width="320" height="163" ${wallFill}/>
+  <rect x="0" y="0" width="320" height="163" fill="url(#wallShade)"/>
+  <!-- Floor -->
+  <path d="M 0 163 L 320 163 L 320 240 L 0 240 Z" ${floorFill}/>
+  <rect x="0" y="163" width="320" height="77" fill="url(#floorShade)"/>
+  ${baseboard}
   ${disco}
   ${window_}
-  ${bookshelf}${fireplace}${painting}${clock}${arcade}
-  ${piano}${pooltable}${trampoline}
-  ${armchair}${sofa}${desk}
-  ${fishtank}${rug}${plant}${lamp}${trophy}${beanbag}
+  ${bookshelf}${fireplace}${painting}${clock}${trophy}${arcade}
+  ${sofa}${piano}${desk}
+  ${lamp}${fishtank}
+  ${armchair}${pooltable}${trampoline}
+  ${plant}
+  ${rug}${beanbag}
   ${petParrot}${petCat}${petDog}${petHamster}
 </svg>`;
 }

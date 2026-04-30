@@ -336,3 +336,28 @@ function injectPete(containerId, heightPx, opts = {}) {
   const el = document.getElementById(containerId);
   if (el) el.innerHTML = createPeteSVG(heightPx, opts);
 }
+
+// Small circular Pete head avatar for leaderboards/friend lists
+function miniPeteIcon(wardrobe = {}, size = 30) {
+  const SHIRT_COLORS = { default: ['#e8934a','#c87030'], red: ['#c83020','#8a1810'], blue: ['#3060c8','#1a3a8a'], green: ['#2a6e46','#1a4a30'], purple: ['#7040b8','#4a2080'], yellow: ['#c8a010','#8a6808'], black: ['#222222','#111111'], white: ['#e8e8e0','#c0c0b8'] };
+  const [sc] = SHIRT_COLORS[wardrobe.shirt || 'default'] || SHIRT_COLORS.default;
+  let hatSvg = '';
+  if (wardrobe.hat === 'flatcap') hatSvg = `<ellipse cx="15" cy="7" rx="8" ry="3" fill="#6b3e18"/><rect x="7" y="6" width="16" height="3" rx="1.5" fill="#5a3010"/><ellipse cx="20" cy="9" rx="4" ry="1.2" fill="#5a3010"/>`;
+  else if (wardrobe.hat === 'beanie') hatSvg = `<rect x="7" y="4" width="16" height="7" rx="5" fill="${sc}"/>`;
+  else if (wardrobe.hat === 'cowboy') hatSvg = `<ellipse cx="15" cy="9" rx="10" ry="2.5" fill="#8b5a30"/><path d="M8 9 Q8.5 4 15 3.5 Q21.5 4 22 9 Z" fill="#6b3e18"/>`;
+  else if (wardrobe.hat === 'tophat') hatSvg = `<rect x="10" y="1" width="10" height="8" rx="1" fill="#111"/><rect x="7" y="8" width="16" height="2.5" rx="1" fill="#111"/>`;
+  else if (wardrobe.hat === 'gradcap') hatSvg = `<path d="M6 8 L15 3 L24 8 Z" fill="#1a1a4a"/><rect x="9" y="7" width="12" height="4" rx="0.5" fill="#1a1a4a"/>`;
+  else if (wardrobe.hat === 'crown') hatSvg = `<path d="M7 9 L9 4 L12 7 L15 2 L18 7 L21 4 L23 9 Z" fill="#c8a010" stroke="#8a6808" stroke-width="0.6"/><rect x="7" y="9" width="16" height="3" rx="1" fill="#c8a010"/>`;
+  else if (wardrobe.hat === 'pirate') hatSvg = `<path d="M5 10 Q8 5 11 7 Q15 4 19 7 Q22 5 25 10 Z" fill="#181818"/>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 30 30" fill="none" style="flex-shrink:0;display:block">
+    <circle cx="15" cy="15" r="14" fill="#f5e0c0" stroke="#d4a870" stroke-width="1.2"/>
+    <ellipse cx="15" cy="14" rx="8.5" ry="9" fill="#f0c890"/>
+    <circle cx="11.5" cy="13.5" r="1.8" fill="#2a1a08"/>
+    <circle cx="18.5" cy="13.5" r="1.8" fill="#2a1a08"/>
+    <circle cx="12" cy="13" r="0.6" fill="white"/>
+    <circle cx="19" cy="13" r="0.6" fill="white"/>
+    <ellipse cx="15" cy="17" rx="2" ry="1.2" fill="#c88050"/>
+    <path d="M11 20 Q15 23 19 20" stroke="#a85e30" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+    ${hatSvg}
+  </svg>`;
+}

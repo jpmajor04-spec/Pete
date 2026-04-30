@@ -79,6 +79,13 @@ async function fbUpdateNickname(nickname) {
   } catch (e) { console.warn('Pete: fbUpdateNickname', e); }
 }
 
+async function fbSaveEquipped(equipped) {
+  if (!fbUser) return;
+  try {
+    await db.collection('users').doc(fbUser.uid).update({ equipped });
+  } catch (e) { console.warn('Pete: fbSaveEquipped', e); }
+}
+
 async function fbSyncUser(streak) {
   if (!fbUser) return;
   try {
