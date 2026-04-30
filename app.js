@@ -1,3 +1,29 @@
+/* ─── VERSION CHECK ──────────────────────────────────────────────────────────── */
+const APP_VERSION = '1.2';
+
+async function checkForUpdate() {
+  try {
+    const snap = await db.collection('config').doc('general').get();
+    if (!snap.exists) return;
+    const minVersion = snap.data().minVersion;
+    if (!minVersion) return;
+    const toNum = v => v.split('.').map(Number).reduce((a, b) => a * 1000 + b, 0);
+    if (toNum(APP_VERSION) < toNum(minVersion)) showUpdateModal();
+  } catch (e) { /* offline or no config doc — allow through */ }
+}
+
+function showUpdateModal() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:36px 28px;max-width:320px;width:100%;text-align:center;font-family:inherit;">
+      <h2 style="margin:0 0 12px;font-size:22px;color:#2a1a08;">Update Available</h2>
+      <p style="margin:0 0 24px;color:#666;font-size:15px;line-height:1.5;">A new version of Pete's Word Wardrobe is ready. Please update to continue.</p>
+      <a href="https://apps.apple.com/app/id6745198237" style="display:block;background:#e8934a;color:#fff;text-decoration:none;padding:14px 24px;border-radius:12px;font-size:16px;font-weight:700;">Update Now</a>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
 /* ─── STATE ─────────────────────────────────────────────────────────────────── */
 
 const state = {
@@ -2624,6 +2650,9 @@ function initNickname() {
 document.addEventListener('DOMContentLoaded', () => {
   // Init Firebase silently in background
   if (typeof fbInit === 'function') fbInit();
+
+  // Check if app needs updating (non-blocking)
+  setTimeout(() => checkForUpdate(), 2000);
 
   // Inject Pete mascot into all screens (also calls initIntro)
   injectAllPetes();
