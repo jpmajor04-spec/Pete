@@ -1,5 +1,10 @@
 {
   "appId": "com.jesse.peteapp",
   "appName": "Pete",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
 }

@@ -1,3 +1,34 @@
+/* ─── PUSH NOTIFICATIONS ─────────────────────────────────────────────────────── */
+async function initPushNotifications() {
+  try {
+    if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
+    const { PushNotifications } = window.Capacitor.Plugins;
+    if (!PushNotifications) return;
+
+    const permResult = await PushNotifications.requestPermissions();
+    if (permResult.receive !== 'granted') return;
+
+    await PushNotifications.register();
+
+    PushNotifications.addListener('registration', async ({ value: token }) => {
+      if (typeof fbSaveFCMToken === 'function') await fbSaveFCMToken(token);
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', notification => {
+      console.log('Pete: notification received', notification);
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', action => {
+      const data = action.notification.data;
+      if (data && data.screen) {
+        const screenMap = { battle: 'battle', friends: 'friends', home: 'home' };
+        const target = screenMap[data.screen];
+        if (target) showScreen(target);
+      }
+    });
+  } catch (e) { console.warn('Pete: push notifications init failed', e); }
+}
+
 /* ─── VERSION CHECK ──────────────────────────────────────────────────────────── */
 const APP_VERSION = '1.2';
 
@@ -2649,7 +2680,10 @@ function initNickname() {
 
 document.addEventListener('DOMContentLoaded', () => {
   // Init Firebase silently in background
-  if (typeof fbInit === 'function') fbInit();
+  if (typeof fbInit === 'function') fbInit().then(() => {
+    // Request push notification permission after Firebase is ready
+    initPushNotifications();
+  });
 
   // Check if app needs updating (non-blocking)
   setTimeout(() => checkForUpdate(), 2000);

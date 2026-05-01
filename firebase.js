@@ -79,6 +79,16 @@ async function fbUpdateNickname(nickname) {
   } catch (e) { console.warn('Pete: fbUpdateNickname', e); }
 }
 
+async function fbSaveFCMToken(token) {
+  if (!fbUser || !token) return;
+  try {
+    await db.collection('users').doc(fbUser.uid).update({
+      fcmTokens: firebase.firestore.FieldValue.arrayUnion(token),
+      lastActive: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) { console.warn('Pete: fbSaveFCMToken', e); }
+}
+
 async function fbSaveEquipped(equipped) {
   if (!fbUser) return;
   try {
