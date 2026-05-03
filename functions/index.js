@@ -8,12 +8,19 @@ initializeApp();
 const db = getFirestore();
 
 // ─── Helper: send notification to a user by uid ──────────────────────────────
-async function sendToUser(uid, title, body, data = {}) {
+async function sendToUser(uid, title, body, data = {}, prefKey = null) {
   try {
     const snap = await db.collection('users').doc(uid).get();
     if (!snap.exists) return;
-    const tokens = snap.data().fcmTokens || [];
+    const userData = snap.data();
+    const tokens = userData.fcmTokens || [];
     if (!tokens.length) return;
+
+    // Respect user notification preferences
+    if (prefKey) {
+      const prefs = userData.notifPrefs || {};
+      if (prefs[prefKey] === false) return;
+    }
 
     const message = {
       notification: { title, body },
@@ -47,7 +54,8 @@ exports.onBattleCreated = onDocumentCreated('battles/{battleId}', async (event) 
     battle.opponent,
     'Battle Challenge!',
     `${battle.creatorName} has challenged you to a word battle!`,
-    { screen: 'battle', battleId: event.params.battleId }
+    { screen: 'battle', battleId: event.params.battleId },
+    'battle'
   );
 });
 
@@ -74,7 +82,8 @@ exports.sendDailyReminder = onSchedule('0 18 * * *', async () => {
         doc.id,
         "Time to practice!",
         "Keep your streak alive — today's word is waiting for you.",
-        { screen: 'home' }
+        { screen: 'home' },
+        'daily'
       )
     );
   });
@@ -105,7 +114,8 @@ exports.sendStreakWarning = onSchedule('0 20 * * *', async () => {
         doc.id,
         'Streak at risk!',
         `Your ${streak}-day streak ends at midnight. Practice now to keep it!`,
-        { screen: 'home' }
+        { screen: 'home' },
+        'streak'
       )
     );
   });
