@@ -13,6 +13,12 @@ workflows:
         BUNDLE_ID: "com.jesse.peteapp"
       xcode: latest
       cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
     scripts:
       - name: Install npm dependencies
         script: |
