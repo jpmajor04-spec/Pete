@@ -2578,23 +2578,100 @@ function renderHouseSVG(eq) {
   <path d="M 0 163 L 320 163 L 320 240 L 0 240 Z" ${floorFill}/>
   <rect x="0" y="163" width="320" height="77" fill="url(#floorShade)"/>
   ${baseboard}
-  ${disco}
+  ${disco ? wrapDraggable('dec_disco', disco) : ''}
   ${window_}
-  ${bookshelf}${fireplace}${painting}${clock}${trophy}${arcade}
-  ${sofa}${piano}${desk}
-  ${lamp}${fishtank}
-  ${armchair}${pooltable}${trampoline}
-  ${plant}
-  ${rug}${beanbag}
-  ${petParrot}${petCat}${petDog}${petHamster}
+  ${wrapDraggable('furn_bookshelf', bookshelf)}${wrapDraggable('furn_fireplace', fireplace)}${wrapDraggable('dec_painting', painting)}${wrapDraggable('dec_clock', clock)}${wrapDraggable('dec_trophy', trophy)}${wrapDraggable('furn_arcade', arcade)}
+  ${wrapDraggable('furn_sofa', sofa)}${wrapDraggable('furn_piano', piano)}${wrapDraggable('furn_desk', desk)}
+  ${wrapDraggable('dec_lamp', lamp)}${wrapDraggable('dec_fishtank', fishtank)}
+  ${wrapDraggable('furn_armchair', armchair)}${wrapDraggable('furn_pooltable', pooltable)}${wrapDraggable('furn_trampoline', trampoline)}
+  ${wrapDraggable('dec_plant', plant)}
+  ${wrapDraggable('dec_rug', rug)}${wrapDraggable('dec_beanbag', beanbag)}
+  ${wrapDraggable('pet_parrot', petParrot)}${wrapDraggable('pet_cat', petCat)}${wrapDraggable('pet_dog', petDog)}${wrapDraggable('pet_hamster', petHamster)}
 </svg>`;
+}
+
+function getItemOffset(id) {
+  try {
+    const p = JSON.parse(localStorage.getItem('pete_house_positions') || '{}');
+    return p[id] || { dx: 0, dy: 0 };
+  } catch { return { dx: 0, dy: 0 }; }
+}
+
+function saveItemOffset(id, dx, dy) {
+  try {
+    const p = JSON.parse(localStorage.getItem('pete_house_positions') || '{}');
+    p[id] = { dx, dy };
+    localStorage.setItem('pete_house_positions', JSON.stringify(p));
+  } catch {}
+}
+
+function wrapDraggable(id, svgContent) {
+  if (!svgContent) return '';
+  const { dx, dy } = getItemOffset(id);
+  return `<g class="house-draggable" data-item-id="${id}" transform="translate(${dx},${dy})" style="cursor:grab">${svgContent}</g>`;
+}
+
+function initHouseDrag(svgEl) {
+  let dragging = null;
+  let startSVGX = 0, startSVGY = 0, startDX = 0, startDY = 0;
+
+  function getSVGPoint(e) {
+    const rect = svgEl.getBoundingClientRect();
+    const scaleX = 320 / rect.width;
+    const scaleY = 240 / rect.height;
+    const src = e.touches ? e.touches[0] : e;
+    return { x: (src.clientX - rect.left) * scaleX, y: (src.clientY - rect.top) * scaleY };
+  }
+
+  function onStart(e) {
+    const g = e.target.closest('.house-draggable');
+    if (!g) return;
+    e.preventDefault();
+    dragging = g;
+    const pt = getSVGPoint(e);
+    startSVGX = pt.x; startSVGY = pt.y;
+    const off = getItemOffset(g.dataset.itemId);
+    startDX = off.dx; startDY = off.dy;
+    g.style.filter = 'drop-shadow(0 4px 12px rgba(0,0,0,0.35))';
+    g.style.cursor = 'grabbing';
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    const pt = getSVGPoint(e);
+    const dx = startDX + (pt.x - startSVGX);
+    const dy = startDY + (pt.y - startSVGY);
+    dragging.setAttribute('transform', `translate(${dx},${dy})`);
+  }
+
+  function onEnd() {
+    if (!dragging) return;
+    const m = (dragging.getAttribute('transform') || '').match(/translate\(([^,]+),([^)]+)\)/);
+    if (m) saveItemOffset(dragging.dataset.itemId, parseFloat(m[1]), parseFloat(m[2]));
+    dragging.style.filter = '';
+    dragging.style.cursor = 'grab';
+    dragging = null;
+  }
+
+  svgEl.addEventListener('mousedown', onStart);
+  svgEl.addEventListener('mousemove', onMove);
+  svgEl.addEventListener('mouseup', onEnd);
+  svgEl.addEventListener('mouseleave', onEnd);
+  svgEl.addEventListener('touchstart', onStart, { passive: false });
+  svgEl.addEventListener('touchmove', onMove, { passive: false });
+  svgEl.addEventListener('touchend', onEnd);
 }
 
 function updateHousePreview() {
   const eq = getHouseEquipped();
   const roomEl = document.getElementById('houseRoom');
   const peteEl = document.getElementById('housePete');
-  if (roomEl) roomEl.innerHTML = renderHouseSVG(eq);
+  if (roomEl) {
+    roomEl.innerHTML = renderHouseSVG(eq);
+    const svgEl = roomEl.querySelector('svg');
+    if (svgEl) initHouseDrag(svgEl);
+  }
   if (peteEl) peteEl.innerHTML = createPeteSVG(70, { wardrobe: getWardrobeForPete() });
 }
 
