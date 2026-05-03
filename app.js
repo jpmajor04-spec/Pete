@@ -506,13 +506,12 @@ function initHome() {
     showScreen('leaderboard');
   });
   document.getElementById('homeBattleBtn').addEventListener('click', () => {
-    _lbTab = 'friends';
-    document.querySelectorAll('.leaderboard-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.lbTab === 'friends');
-    });
-    _lbData = null;
-    initLeaderboard();
-    showScreen('leaderboard');
+    _bhTab = 'friends';
+    initBattleHub();
+    showScreen('battlehub');
+  });
+  document.getElementById('homeFreePlayBtn').addEventListener('click', () => {
+    startFreePlay();
   });
   document.getElementById('houseNavBtn').addEventListener('click', () => {
     initHouse();
@@ -1596,6 +1595,7 @@ const revState = {
   score: 0,
   answered: false,
   sourceScreen: 'practice',
+  freePlay: false,
 };
 
 function getDistractors(targetWord, count = 3) {
@@ -1654,14 +1654,20 @@ function generateRevisionQuestions(words) {
   return questions.sort(() => Math.random() - 0.5);
 }
 
-function startRevision(wordObjects, sourceScreen = 'practice') {
+function startRevision(wordObjects, sourceScreen = 'practice', freePlay = false) {
   revState.questions = generateRevisionQuestions(wordObjects);
   revState.idx = 0;
   revState.score = 0;
   revState.answered = false;
   revState.sourceScreen = sourceScreen;
+  revState.freePlay = freePlay;
   showScreen('revision');
   renderRevisionQuestion();
+}
+
+function startFreePlay() {
+  const shuffled = [...WORDS].sort(() => Math.random() - 0.5).slice(0, 20);
+  startRevision(shuffled, 'home', true);
 }
 
 function renderRevisionQuestion() {
@@ -1814,16 +1820,22 @@ function showRevisionResults() {
         <span class="revision-results-denom">/ ${total}</span>
       </div>
       <div class="revision-results-pct">${pct}% correct</div>
-      <button class="btn btn-primary" id="revDoneBtn">Back to Practice</button>
+      ${revState.freePlay
+        ? `<button class="btn btn-primary" id="revDoneBtn">Play Again</button>
+           <button class="btn btn-secondary" id="revHomeBtn" style="margin-top:8px">Back to Home</button>`
+        : `<button class="btn btn-primary" id="revDoneBtn">Back to Practice</button>`}
     </div>`;
 
   const peteEl = document.getElementById('peteRevResults');
   if (peteEl) peteEl.innerHTML = createPeteSVG(90, { wardrobe, bubble });
 
   document.getElementById('revDoneBtn').addEventListener('click', () => {
+    if (revState.freePlay) { startFreePlay(); return; }
     initPractice();
     showScreen(revState.sourceScreen);
   });
+  const homeBtn = document.getElementById('revHomeBtn');
+  if (homeBtn) homeBtn.addEventListener('click', () => { initHome(); showScreen('home'); });
 }
 
 /* ─── BATTLE ─────────────────────────────────────────────────────────────────── */
@@ -1991,6 +2003,114 @@ function showBattleResults(myScore, mySentence, theirScore, theirSentence, oppon
       <button class="btn btn-primary" id="battleFinishBtn">Back to Home</button>
     </div>`;
   document.getElementById('battleFinishBtn').addEventListener('click', () => { initHome(); showScreen('home'); });
+  // Track win
+  if (won && typeof fbRecordBattleWin === 'function') fbRecordBattleWin();
+}
+
+/* ─── BATTLE HUB SCREEN ──────────────────────────────────────────────────────── */
+
+let _bhTab = 'friends';
+
+async function initBattleHub() {
+  const body = document.getElementById('battlehubBody');
+  if (!body) return;
+  body.innerHTML = '<div class="battlehub-loading">Loading…</div>';
+
+  document.querySelectorAll('.battlehub-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.bhtab === _bhTab);
+    t.onclick = () => { _bhTab = t.dataset.bhtab; initBattleHub(); };
+  });
+
+  if (_bhTab === 'friends') {
+    // Reuse friends leaderboard data
+    let data = _lbData;
+    if (!data) {
+      const [lb, pending] = await Promise.all([fbGetFriendsLeaderboard(), fbGetPendingBattles()]);
+      data = { ...lb, pendingBattles: pending, friendsStreak: lb.streak };
+      _lbData = data;
+    }
+
+    const myId = localStorage.getItem('pete_uid') || (typeof fbUser !== 'undefined' && fbUser ? fbUser.uid : null);
+    const pending = data.pendingBattles || [];
+    const entries = (data.friendsStreak || data.streak || []).filter(e => e.id !== myId);
+
+    let html = '';
+
+    pending.forEach(b => {
+      html += `<div class="battlehub-challenge">
+        <div>
+          <div class="battlehub-challenge-from">⚔ Challenge from</div>
+          <div class="battlehub-challenge-name">${b.creatorName || 'Someone'}</div>
+        </div>
+        <button class="battlehub-answer-btn" data-battle-id="${b.id}" data-opponent="${b.creatorName || 'Someone'}">Answer →</button>
+      </div>`;
+    });
+
+    if (entries.length === 0 && pending.length === 0) {
+      html += '<div class="battlehub-empty">Add friends to challenge them to battles!</div>';
+    }
+
+    entries.forEach(e => {
+      const lastActiveMs = e.lastActive && e.lastActive.toMillis ? e.lastActive.toMillis() : 0;
+      const isOnline = Date.now() - lastActiveMs < 5 * 60 * 1000;
+      const wardrobe = e.equipped || {};
+      const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 32) : '';
+      const onlineDot = `<span class="online-dot ${isOnline ? 'online-dot-active' : ''}"></span>`;
+      html += `<div class="battlehub-friend-row">
+        <div class="battlehub-friend-avatar" style="position:relative">${avatar}${onlineDot}</div>
+        <div class="battlehub-friend-name">${e.displayName || 'Anonymous'}</div>
+        <button class="battlehub-battle-btn ${isOnline ? '' : 'battlehub-battle-btn-offline'}"
+          data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}"
+          data-is-online="${isOnline}" ${isOnline ? '' : 'disabled'}>
+          ${isOnline ? '⚔ Battle' : 'Offline'}
+        </button>
+      </div>`;
+    });
+
+    body.innerHTML = html;
+
+    body.querySelectorAll('.battlehub-answer-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const battle = await fbGetBattle(btn.dataset.battleId);
+        if (battle) startBattle(btn.dataset.battleId, 'opponent', { word: battle.word, wordDefinition: battle.wordDefinition }, btn.dataset.opponent);
+      });
+    });
+
+    body.querySelectorAll('.battlehub-battle-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.textContent = 'Sending…';
+        const bw = pickBattleWord();
+        const result = await fbCreateBattle(btn.dataset.friendId, btn.dataset.friendName, bw.word, bw.definition);
+        if (result.ok) {
+          startBattle(result.battleId, 'creator', bw, btn.dataset.friendName);
+        } else {
+          showToast(result.error || 'Could not send challenge');
+          btn.disabled = false; btn.textContent = '⚔ Battle';
+        }
+      });
+    });
+
+  } else {
+    // Leaderboard: most battles won
+    const rows = await fbGetBattleLeaderboard();
+    if (rows.length === 0) {
+      body.innerHTML = '<div class="battlehub-empty">No battles completed yet — challenge a friend!</div>';
+      return;
+    }
+    let html = '<div class="battlehub-lb-title">Most Battles Won</div>';
+    rows.forEach((r, i) => {
+      const wardrobe = r.equipped || {};
+      const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
+      const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      html += `<div class="leaderboard-entry">
+        <div class="rank-badge ${badgeClass}">${i + 1}</div>
+        <div class="lb-avatar">${avatar}</div>
+        <div class="leaderboard-name">${r.displayName || 'Anonymous'}</div>
+        <div class="leaderboard-score">${r.battleWins || 0} win${(r.battleWins || 0) !== 1 ? 's' : ''}</div>
+      </div>`;
+    });
+    body.innerHTML = html;
+  }
 }
 
 /* ─── LEADERBOARD SCREEN ─────────────────────────────────────────────────────── */
@@ -2907,9 +3027,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('revisionQuitBtn').addEventListener('click', () => {
+    if (revState.freePlay) { initHome(); showScreen('home'); return; }
     initPractice();
     showScreen(revState.sourceScreen);
   });
+
+  document.getElementById('battlehubBackBtn').addEventListener('click', () => showScreen('home'));
 
   // Intro buttons
   document.getElementById('introKnowBtn').addEventListener('click', handleKnowIt);

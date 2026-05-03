@@ -65,6 +65,16 @@
             </span>
             <span class="home-btn-arrow">→</span>
           </button>
+          <button class="home-btn home-btn-freeplay" id="homeFreePlayBtn">
+            <span class="home-btn-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#5c4f3d" stroke-width="2"/><polygon points="10,8 17,12 10,16" fill="#5c4f3d"/></svg>
+            </span>
+            <span class="home-btn-text">
+              <strong>Free Play</strong>
+              <small>Explore any word, no pressure</small>
+            </span>
+            <span class="home-btn-arrow">→</span>
+          </button>
         </div>
         <div class="home-wotw-block" id="homeWotwBlock"></div>
       </div>
@@ -364,6 +374,19 @@
       </div>
       <div class="leaderboard-list" id="leaderboardList"></div>
       <div class="friend-code-bar" id="friendCodeBar"></div>
+    </div>
+
+    <!-- SCREEN: BATTLE HUB -->
+    <div class="screen" id="screen-battlehub">
+      <div class="battlehub-header">
+        <button class="back-btn" id="battlehubBackBtn">← Back</button>
+        <h2 class="battlehub-title">⚔ Battles</h2>
+      </div>
+      <div class="battlehub-tabs">
+        <button class="battlehub-tab active" data-bhtab="friends">Friends</button>
+        <button class="battlehub-tab" data-bhtab="leaderboard">Top Warriors</button>
+      </div>
+      <div class="battlehub-body" id="battlehubBody"></div>
     </div>
 
     <!-- SCREEN: BATTLE -->

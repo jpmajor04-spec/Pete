@@ -85,6 +85,25 @@ async function fbInit() {
   });
 }
 
+async function fbRecordBattleWin() {
+  if (!fbUser) return;
+  try {
+    await db.collection('users').doc(fbUser.uid).update({
+      battleWins: firebase.firestore.FieldValue.increment(1)
+    });
+  } catch (e) { console.warn('Pete: fbRecordBattleWin', e); }
+}
+
+async function fbGetBattleLeaderboard() {
+  try {
+    const snap = await db.collection('users')
+      .orderBy('battleWins', 'desc')
+      .limit(20)
+      .get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => (u.battleWins || 0) > 0);
+  } catch (e) { console.warn('Pete: fbGetBattleLeaderboard', e); return []; }
+}
+
 async function fbUpdateNickname(nickname) {
   if (!fbUser) return;
   try {

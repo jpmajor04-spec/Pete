@@ -1903,6 +1903,14 @@ body::before {
 }
 .home-btn-secondary:hover { background: var(--bg-card-hover); box-shadow: var(--shadow-md); }
 
+.home-btn-freeplay {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--border);
+}
+.home-btn-freeplay:hover { background: var(--bg-card-hover); box-shadow: var(--shadow-md); }
+
 .home-btn-icon { font-size: 26px; flex-shrink: 0; }
 
 .home-btn-text {
@@ -3488,4 +3496,152 @@ body::before {
 .leaderboard-entry-battle-btn:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* ─── BATTLE HUB ─────────────────────────────────────────────────────────────── */
+
+.battlehub-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.battlehub-title {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.battlehub-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.battlehub-tab {
+  padding: 8px 18px;
+  border-radius: 100px 100px 0 0;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+}
+
+.battlehub-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.battlehub-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.battlehub-loading,
+.battlehub-empty {
+  text-align: center;
+  padding: 40px 20px;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--text-muted);
+}
+
+.battlehub-challenge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff5ec;
+  border: 1.5px solid #f0c89a;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.battlehub-challenge-from {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.battlehub-challenge-name {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.battlehub-answer-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.battlehub-friend-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.battlehub-friend-avatar {
+  flex-shrink: 0;
+}
+
+.battlehub-friend-name {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.battlehub-battle-btn {
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  background: #b84c2a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.battlehub-battle-btn-offline {
+  background: #ccc;
+  cursor: default;
+}
+
+.battlehub-lb-title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
 }
