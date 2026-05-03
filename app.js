@@ -1857,14 +1857,14 @@ function startBattle(battleId, role, wordData, opponentName) {
   battleState.opponentName = opponentName;
   document.getElementById('battleVsLabel').textContent = `vs. ${opponentName}`;
   document.getElementById('battleProgressFill').style.width = '0%';
-  document.getElementById('battleCount').textContent = '30s';
+  document.getElementById('battleCount').textContent = '90s';
   showScreen('battle');
   renderBattleChallenge();
 }
 
 function renderBattleChallenge() {
   const { word, wordDefinition, opponentName } = battleState;
-  battleState.timeLeft = 30;
+  battleState.timeLeft = 90;
 
   const body = document.getElementById('battleBody');
   body.innerHTML = `
@@ -1886,7 +1886,7 @@ function renderBattleChallenge() {
             stroke-dasharray="113" stroke-dashoffset="0" id="battleTimerRing"
             stroke-linecap="round" transform="rotate(-90 22 22)"/>
         </svg>
-        <div class="battle-timer-num" id="battleTimer">30</div>
+        <div class="battle-timer-num" id="battleTimer">90</div>
       </div>
       <textarea class="battle-sentence-input" id="battleSentenceInput"
         placeholder="Use '${word}' in your sentence…"
@@ -1915,12 +1915,12 @@ function renderBattleChallenge() {
     const fill    = document.getElementById('battleProgressFill');
     if (timerEl) timerEl.textContent = battleState.timeLeft;
     if (ring) {
-      const offset = 113 - (113 * (battleState.timeLeft / 30));
+      const offset = 113 - (113 * (battleState.timeLeft / 90));
       ring.setAttribute('stroke-dashoffset', offset);
-      if (battleState.timeLeft <= 10) ring.setAttribute('stroke', '#c83020');
+      if (battleState.timeLeft <= 15) ring.setAttribute('stroke', '#c83020');
     }
-    if (fill) fill.style.width = `${((30 - battleState.timeLeft) / 30) * 100}%`;
-    if (timerEl && battleState.timeLeft <= 10) timerEl.classList.add('battle-timer-urgent');
+    if (fill) fill.style.width = `${((90 - battleState.timeLeft) / 90) * 100}%`;
+    if (timerEl && battleState.timeLeft <= 15) timerEl.classList.add('battle-timer-urgent');
     if (battleState.timeLeft <= 0) {
       clearInterval(battleState.timerInterval);
       submitBattleSentence(input ? input.value.trim() : '');
@@ -2157,7 +2157,7 @@ function renderLeaderboardTab(tab) {
         const isOnline = isMe || (Date.now() - lastActiveMs < 5 * 60 * 1000);
         const onlineDot = `<span class="online-dot ${isOnline ? 'online-dot-active' : ''}"></span>`;
         const battleBtn = !isMe
-          ? `<button class="leaderboard-entry-battle-btn" data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}">Battle</button>`
+          ? `<button class="leaderboard-entry-battle-btn" data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}" data-is-online="${isOnline}">${isOnline ? 'Battle' : 'Offline'}</button>`
           : '';
         return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}">
           <div class="rank-badge ${badgeClass}">${i + 1}</div>
@@ -2182,6 +2182,10 @@ function renderLeaderboardTab(tab) {
 
     // Wire up "⚔ Battle" buttons on each friend
     listEl.querySelectorAll('.leaderboard-entry-battle-btn').forEach(btn => {
+      if (btn.dataset.isOnline !== 'true') {
+        btn.disabled = true;
+        return;
+      }
       btn.addEventListener('click', async () => {
         const friendId   = btn.dataset.friendId;
         const friendName = btn.dataset.friendName;
@@ -2195,7 +2199,7 @@ function renderLeaderboardTab(tab) {
         } else {
           showToast(result.error || 'Could not send challenge');
           btn.disabled = false;
-          btn.textContent = '⚔ Battle';
+          btn.textContent = 'Battle';
         }
       });
     });
@@ -2711,6 +2715,40 @@ function initNickname() {
   });
 }
 
+/* ─── SETTINGS ───────────────────────────────────────────────────────────────── */
+
+const NOTIF_PREFS_KEY = 'pete_notif_prefs';
+
+function getNotifPrefs() {
+  try { return JSON.parse(localStorage.getItem(NOTIF_PREFS_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveNotifPrefs(prefs) {
+  localStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs));
+  if (typeof fbSaveNotifPrefs === 'function') fbSaveNotifPrefs(prefs);
+}
+
+function initSettings() {
+  const prefs = getNotifPrefs();
+  const daily   = document.getElementById('settingsDailyToggle');
+  const battle  = document.getElementById('settingsBattleToggle');
+  const streak  = document.getElementById('settingsStreakToggle');
+
+  daily.checked  = prefs.daily  !== false;
+  battle.checked = prefs.battle !== false;
+  streak.checked = prefs.streak !== false;
+
+  const onChange = () => saveNotifPrefs({
+    daily:  daily.checked,
+    battle: battle.checked,
+    streak: streak.checked,
+  });
+
+  daily.onchange  = onChange;
+  battle.onchange = onChange;
+  streak.onchange = onChange;
+}
+
 /* ─── EVENT LISTENERS ────────────────────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2882,6 +2920,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.word) showScreen('today');
     else showScreen('home');
   });
+
+  // Settings
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    initSettings();
+    showScreen('settings');
+  });
+  document.getElementById('settingsBackBtn').addEventListener('click', () => showScreen('home'));
 
   // Back buttons
   document.querySelectorAll('.back-btn[data-back]').forEach(btn => {

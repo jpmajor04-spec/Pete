@@ -74,6 +74,10 @@ async function fbInit() {
               }
             } catch (e) {}
           }
+          // Load notification prefs from Firestore into localStorage
+          if (data.notifPrefs) {
+            localStorage.setItem('pete_notif_prefs', JSON.stringify(data.notifPrefs));
+          }
         }
       } catch (e) { console.warn('Pete: user doc init', e); }
       resolve(user);
@@ -86,6 +90,13 @@ async function fbUpdateNickname(nickname) {
   try {
     await db.collection('users').doc(fbUser.uid).update({ displayName: nickname });
   } catch (e) { console.warn('Pete: fbUpdateNickname', e); }
+}
+
+async function fbSaveNotifPrefs(prefs) {
+  if (!fbUser) return;
+  try {
+    await db.collection('users').doc(fbUser.uid).update({ notifPrefs: prefs });
+  } catch (e) { console.warn('Pete: fbSaveNotifPrefs', e); }
 }
 
 async function fbSaveFCMToken(token) {
