@@ -105,6 +105,24 @@ const WARDROBE_CATALOG = [
 
 /* ─── COINS ──────────────────────────────────────────────────────────────────── */
 
+function confirmPurchase(itemName, cost, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:300px;width:100%;text-align:center;font-family:inherit;">
+      <div style="font-size:17px;font-weight:700;color:#2a1a08;margin-bottom:8px;">Buy ${itemName}?</div>
+      <div style="font-size:15px;color:#888;margin-bottom:24px;">This will cost you <strong style="color:#c8a010;">${cost} coins</strong>.</div>
+      <div style="display:flex;gap:10px;">
+        <button id="confirmPurchaseCancel" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid #ddd;background:#fff;font-size:15px;cursor:pointer;">Cancel</button>
+        <button id="confirmPurchaseOk" style="flex:1;padding:12px;border-radius:10px;border:none;background:#e8934a;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">Buy</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#confirmPurchaseCancel').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#confirmPurchaseOk').addEventListener('click', () => { overlay.remove(); onConfirm(); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
 function getCoins() {
   const earned = parseInt(localStorage.getItem('pete_coins_earned') || '0', 10);
   const spent  = parseInt(localStorage.getItem('pete_coins_spent')  || '0', 10);
@@ -1466,10 +1484,12 @@ function renderWardrobeGrid(tab) {
           showToast('Not enough coins — keep learning words!');
           return;
         }
-        spendCoins(item.cost);
-        ownItem(item.id);
-        equipItem(item.id, tab);
-        showToast(`${item.name} unlocked!`);
+        confirmPurchase(item.name, item.cost, () => {
+          spendCoins(item.cost);
+          ownItem(item.id);
+          equipItem(item.id, tab);
+          showToast(`${item.name} unlocked!`);
+        });
       }
     });
 
@@ -2052,10 +2072,16 @@ async function renderFriendCodeBar() {
     const fromId = row.dataset.fromId;
     row.querySelector('.friend-req-accept-btn').addEventListener('click', async () => {
       row.innerHTML = '<span class="friend-request-name">Accepting…</span>';
-      await fbAcceptFriendRequest(reqId, fromId);
-      showToast('Friend added!');
-      _lbData = null; // force leaderboard refresh
-      renderFriendCodeBar();
+      const result = await fbAcceptFriendRequest(reqId, fromId);
+      if (result && result.ok) {
+        showToast('Friend added!');
+        _lbData = null;
+        await renderFriendCodeBar();
+        initLeaderboard();
+      } else {
+        showToast(result?.error || 'Something went wrong');
+        renderFriendCodeBar();
+      }
     });
     row.querySelector('.friend-req-decline-btn').addEventListener('click', async () => {
       row.innerHTML = '<span class="friend-request-name">Declined.</span>';
@@ -2127,12 +2153,15 @@ function renderLeaderboardTab(tab) {
         const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
         const wardrobe = isMe ? getEquipped() : (e.equipped || {});
         const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
+        const lastActiveMs = e.lastActive && e.lastActive.toMillis ? e.lastActive.toMillis() : 0;
+        const isOnline = isMe || (Date.now() - lastActiveMs < 5 * 60 * 1000);
+        const onlineDot = `<span class="online-dot ${isOnline ? 'online-dot-active' : ''}"></span>`;
         const battleBtn = !isMe
           ? `<button class="leaderboard-entry-battle-btn" data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}">Battle</button>`
           : '';
         return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}">
           <div class="rank-badge ${badgeClass}">${i + 1}</div>
-          <div class="lb-avatar">${avatar}</div>
+          <div class="lb-avatar" style="position:relative">${avatar}${onlineDot}</div>
           <div class="leaderboard-name">${e.displayName || 'Anonymous'}${isMe ? ' <span class="lb-you">(you)</span>' : ''}</div>
           <div class="leaderboard-score">${score}</div>
           ${battleBtn}
@@ -2613,8 +2642,14 @@ function renderHouseGrid(tab) {
       if (action === 'locked') { showToast(`Need ${cost} coins`); return; }
       if (action === 'buy') {
         if (getCoins() < cost) { showToast('Not enough coins'); return; }
-        spendCoins(cost);
-        ownHouseItem(id);
+        const hItem = HOUSE_CATALOG.find(h => h.id === id);
+        confirmPurchase(hItem ? hItem.name : id, cost, () => {
+          spendCoins(cost);
+          ownHouseItem(id);
+          equipHouseItem(id, type);
+          renderHouseGrid(tab);
+        });
+        return;
       }
       equipHouseItem(id, type);
       renderHouseGrid(tab);

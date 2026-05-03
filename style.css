@@ -2550,6 +2550,22 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.online-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ccc;
+  border: 2px solid #fff;
+}
+
+.online-dot-active {
+  background: #4caf50;
 }
 
 .leaderboard-score {
