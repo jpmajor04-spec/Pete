@@ -458,7 +458,7 @@ function initHome() {
   const wardrobe = getWardrobeForPete();
   const peteEl = document.getElementById('peteHome');
   const greeting = PETE_GREETINGS[Math.floor(Math.random() * PETE_GREETINGS.length)];
-  if (peteEl) peteEl.innerHTML = createPeteSVG(90, { wardrobe, bubble: greeting });
+  if (peteEl) peteEl.innerHTML = createPeteSVG(70, { wardrobe, bubble: greeting });
 
   const nickname = localStorage.getItem('pete_nickname');
   const titleEl    = document.getElementById('homeTitle');
@@ -475,28 +475,26 @@ function initHome() {
     subtitleEl.textContent = HOME_SUBTITLES[Math.floor(Math.random() * HOME_SUBTITLES.length)];
   }
 
-  // Always show Worders of the Week button
+  // Quick action grid
   const wotwBlock = document.getElementById('homeWotwBlock');
   if (!wotwBlock) return;
   const weekEntries = getThisWeekFiveStars();
-  const countLabel = weekEntries.length > 0 ? ` <strong>(${weekEntries.length})</strong>` : '';
+  const countBadge = weekEntries.length > 0 ? `<span class="home-quick-badge">${weekEntries.length}</span>` : '';
   wotwBlock.innerHTML = `
-    <button class="home-wotw-btn" id="homeWotwBtn">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M7 3H13V11C13 13.2 11.6 15 10 15C8.4 15 7 13.2 7 11V3Z" fill="#c8a010"/><path d="M7 5H4C4 8 5.5 9.5 7 10" stroke="#c8a010" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M13 5H16C16 8 14.5 9.5 13 10" stroke="#c8a010" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="8.5" y="15" width="3" height="2.5" fill="#c8a010"/><rect x="6" y="17" width="8" height="1.5" rx="0.75" fill="#8a6010"/></svg>
-      <span>Worders of the Week${countLabel}</span>
-      <span>→</span>
-    </button>
-    <button class="home-wotw-btn" id="homeLeaderboardBtn">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="1" y="11" width="5" height="7" rx="1" fill="#7b6a55"/><rect x="7.5" y="6" width="5" height="12" rx="1" fill="#b84c2a"/><rect x="14" y="2" width="5" height="16" rx="1" fill="#c8a010"/></svg>
-      <span>Leaderboard</span>
-      <span>→</span>
-    </button>
-    <button class="home-wotw-btn home-battle-btn" id="homeBattleBtn">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 3L9 9M9 9L3 15M9 9L17 3M9 9L17 17" stroke="#b84c2a" stroke-width="2.2" stroke-linecap="round"/></svg>
-      <span>⚔ Battle a Friend</span>
-      <span>→</span>
-    </button>
-    `;
+    <div class="home-quick-grid">
+      <button class="home-quick-btn" id="homeWotwBtn">
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M7 3H13V11C13 13.2 11.6 15 10 15C8.4 15 7 13.2 7 11V3Z" fill="#c8a010"/><path d="M7 5H4C4 8 5.5 9.5 7 10" stroke="#c8a010" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M13 5H16C16 8 14.5 9.5 13 10" stroke="#c8a010" stroke-width="2.2" fill="none" stroke-linecap="round"/><rect x="8.5" y="15" width="3" height="2.5" fill="#c8a010"/><rect x="6" y="17" width="8" height="1.5" rx="0.75" fill="#8a6010"/></svg>
+        <span>Worders${countBadge}</span>
+      </button>
+      <button class="home-quick-btn" id="homeLeaderboardBtn">
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><rect x="1" y="11" width="5" height="7" rx="1" fill="#7b6a55"/><rect x="7.5" y="6" width="5" height="12" rx="1" fill="#b84c2a"/><rect x="14" y="2" width="5" height="16" rx="1" fill="#c8a010"/></svg>
+        <span>Leaderboard</span>
+      </button>
+      <button class="home-quick-btn" id="homeBattleBtn">
+        <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M3 3L9 9M9 9L3 15M9 9L17 3M9 9L17 17" stroke="#c8a010" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span>⚔ Battle</span>
+      </button>
+    </div>`;
   document.getElementById('homeWotwBtn').addEventListener('click', () => {
     initWotw();
     showScreen('wotw');
@@ -2926,24 +2924,28 @@ function saveNotifPrefs(prefs) {
 }
 
 function initSettings() {
-  const prefs = getNotifPrefs();
-  const daily   = document.getElementById('settingsDailyToggle');
-  const battle  = document.getElementById('settingsBattleToggle');
-  const streak  = document.getElementById('settingsStreakToggle');
+  const prefs    = getNotifPrefs();
+  const daily    = document.getElementById('settingsDailyToggle');
+  const battle   = document.getElementById('settingsBattleToggle');
+  const streak   = document.getElementById('settingsStreakToggle');
+  const fiveStar = document.getElementById('settingsFiveStarToggle');
 
-  daily.checked  = prefs.daily  !== false;
-  battle.checked = prefs.battle !== false;
-  streak.checked = prefs.streak !== false;
+  daily.checked    = prefs.daily    !== false;
+  battle.checked   = prefs.battle   !== false;
+  streak.checked   = prefs.streak   !== false;
+  fiveStar.checked = prefs.fiveStar !== false;
 
   const onChange = () => saveNotifPrefs({
-    daily:  daily.checked,
-    battle: battle.checked,
-    streak: streak.checked,
+    daily:    daily.checked,
+    battle:   battle.checked,
+    streak:   streak.checked,
+    fiveStar: fiveStar.checked,
   });
 
-  daily.onchange  = onChange;
-  battle.onchange = onChange;
-  streak.onchange = onChange;
+  daily.onchange    = onChange;
+  battle.onchange   = onChange;
+  streak.onchange   = onChange;
+  fiveStar.onchange = onChange;
 }
 
 /* ─── EVENT LISTENERS ────────────────────────────────────────────────────────── */

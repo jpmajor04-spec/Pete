@@ -59,7 +59,32 @@ exports.onBattleCreated = onDocumentCreated('battles/{battleId}', async (event) 
   );
 });
 
-// ─── 2. Daily practice reminder (6pm every day) ───────────────────────────────
+// ─── 2. Five-star sentence notification ──────────────────────────────────────
+exports.onFiveStarEarned = onDocumentCreated('five_stars/{docId}', async (event) => {
+  const data = event.data.data();
+  if (!data || !data.uid || !data.word) return;
+
+  // Get the earner's display name
+  const earnerSnap = await db.collection('users').doc(data.uid).get();
+  if (!earnerSnap.exists) return;
+  const earnerName = earnerSnap.data().displayName || 'Someone';
+
+  // Notify all friends of the earner
+  const friendIds = earnerSnap.data().friendIds || [];
+  if (!friendIds.length) return;
+
+  await Promise.all(friendIds.map(friendId =>
+    sendToUser(
+      friendId,
+      '⭐ 5-Star Sentence!',
+      `${earnerName} just wrote a 5-star sentence for "${data.word}"!`,
+      { screen: 'friends' },
+      'fiveStar'
+    )
+  ));
+});
+
+// ─── 3. Daily practice reminder (6pm every day) ───────────────────────────────
 exports.sendDailyReminder = onSchedule('0 18 * * *', async () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
