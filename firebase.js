@@ -65,6 +65,15 @@ async function fbInit() {
           } else if (data.displayName && !localNickname) {
             localStorage.setItem('pete_nickname', data.displayName);
           }
+          // Sync local equipped state to Firestore if not yet saved
+          if (!data.equipped) {
+            try {
+              const localEquipped = JSON.parse(localStorage.getItem('pete_equipped') || '{}');
+              if (Object.keys(localEquipped).length > 0) {
+                await ref.update({ equipped: localEquipped });
+              }
+            } catch (e) {}
+          }
         }
       } catch (e) { console.warn('Pete: user doc init', e); }
       resolve(user);
