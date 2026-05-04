@@ -185,88 +185,113 @@ function createPeteSVG(heightPx = 80, opts = {}) {
   // Sunglasses replace the normal glasses entirely
   const hasSunglasses = wardrobe.accessory === 'sunglasses';
   const glassesSvg = hasSunglasses ? `
-  <!-- Aviator sunglasses (gold frame, warm tinted lenses) -->
+  <!-- Aviator sunglasses -->
   <path d="M10 17 Q10 11 20 11 Q30 11 30 18 Q30 27 20 27 Q10 27 10 17 Z" fill="rgba(90,55,10,0.86)" stroke="#c8a010" stroke-width="1.7"/>
   <path d="M30 17 Q30 11 40 11 Q50 11 50 18 Q50 27 40 27 Q30 27 30 17 Z" fill="rgba(90,55,10,0.86)" stroke="#c8a010" stroke-width="1.7"/>
-  <line x1="30" y1="16" x2="30" y2="16" stroke="#c8a010" stroke-width="1.7"/>
   <line x1="10" y1="15" x2="7" y2="13.5" stroke="#c8a010" stroke-width="1.7"/>
   <line x1="50" y1="15" x2="53" y2="13.5" stroke="#c8a010" stroke-width="1.7"/>
   <path d="M13.5 14 Q17 11.5 20.5 13" stroke="rgba(255,220,140,0.45)" stroke-width="1.3" fill="none" stroke-linecap="round"/>
   <path d="M33.5 14 Q37 11.5 40.5 13" stroke="rgba(255,220,140,0.45)" stroke-width="1.3" fill="none" stroke-linecap="round"/>` : `
-  <!-- Glasses — thick rectangular frames -->
-  <rect x="10" y="14" width="19" height="13" rx="3" fill="rgba(180,215,255,0.22)" stroke="#2a1808" stroke-width="3"/>
-  <rect x="31" y="14" width="19" height="13" rx="3" fill="rgba(180,215,255,0.22)" stroke="#2a1808" stroke-width="3"/>
+  <!-- Glasses — thick frames with gradient lens -->
+  <rect x="10" y="14" width="19" height="13" rx="3" fill="url(#gl${id})" stroke="#2a1808" stroke-width="3"/>
+  <rect x="31" y="14" width="19" height="13" rx="3" fill="url(#gl${id})" stroke="#2a1808" stroke-width="3"/>
   <line x1="29" y1="19" x2="31" y2="19" stroke="#2a1808" stroke-width="2.5"/>
   <line x1="10" y1="18" x2="8" y2="16" stroke="#2a1808" stroke-width="2.5"/>
-  <line x1="50" y1="18" x2="52" y2="16" stroke="#2a1808" stroke-width="2.5"/>`;
+  <line x1="50" y1="18" x2="52" y2="16" stroke="#2a1808" stroke-width="2.5"/>
+  <path d="M12.5 15.5 Q16 14.5 18.5 16.5" stroke="rgba(255,255,255,0.55)" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+  <path d="M33.5 15.5 Q37 14.5 39.5 16.5" stroke="rgba(255,255,255,0.55)" stroke-width="1.2" fill="none" stroke-linecap="round"/>`;
 
   const eyesSvg = hasSunglasses ? '' : `
-  <!-- Eyes -->
-  <circle cx="20" cy="20" r="3.8" fill="#1e1008"/>
-  <circle cx="40" cy="20" r="3.8" fill="#1e1008"/>
-  <circle cx="21" cy="18.5" r="1.3" fill="white"/>
-  <circle cx="41" cy="18.5" r="1.3" fill="white"/>`;
+  <!-- Eyes: sclera + iris + pupil + specular highlight -->
+  <circle cx="20" cy="20" r="4.5" fill="white"/>
+  <circle cx="20" cy="20" r="3.2" fill="#6b4020"/>
+  <circle cx="20" cy="20" r="1.9" fill="#1a1008"/>
+  <circle cx="21.5" cy="18.5" r="1.2" fill="white"/>
+  <circle cx="40" cy="20" r="4.5" fill="white"/>
+  <circle cx="40" cy="20" r="3.2" fill="#6b4020"/>
+  <circle cx="40" cy="20" r="1.9" fill="#1a1008"/>
+  <circle cx="41.5" cy="18.5" r="1.2" fill="white"/>`;
 
   const svg = `<svg width="${w}" height="${h}" viewBox="0 0 60 80" xmlns="http://www.w3.org/2000/svg" class="pete-svg" aria-label="Pete the mascot" style="overflow:visible">
+  <defs>
+    <radialGradient id="sg${id}" cx="38%" cy="28%" r="70%">
+      <stop offset="0%" stop-color="#f8d0a0"/>
+      <stop offset="50%" stop-color="#e8b078"/>
+      <stop offset="100%" stop-color="#b87040"/>
+    </radialGradient>
+    <radialGradient id="sd${id}" cx="50%" cy="50%" r="50%">
+      <stop offset="55%" stop-color="rgba(0,0,0,0)"/>
+      <stop offset="100%" stop-color="rgba(80,30,0,0.22)"/>
+    </radialGradient>
+    <linearGradient id="bl${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.16)"/>
+      <stop offset="40%" stop-color="rgba(255,255,255,0)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.22)"/>
+    </linearGradient>
+    <linearGradient id="sh${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.14)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.2)"/>
+    </linearGradient>
+    <linearGradient id="gl${id}" x1="0.1" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="rgba(220,240,255,0.42)"/>
+      <stop offset="100%" stop-color="rgba(180,210,255,0.08)"/>
+    </linearGradient>
+  </defs>
+
   <!-- Ground shadow -->
-  <ellipse cx="30" cy="79" rx="13" ry="2.5" fill="rgba(100,55,15,0.13)"/>
+  <ellipse cx="30" cy="79" rx="14" ry="2.8" fill="rgba(80,35,5,0.18)"/>
 
-  <!-- Legs (bare skin below shorts) -->
-  <rect x="17" y="58" width="8" height="14" rx="4" fill="#e0a870" ${transform}/>
-  <rect x="35" y="58" width="8" height="14" rx="4" fill="#e0a870" ${transform}/>
+  <!-- Legs -->
+  <rect x="17" y="58" width="8" height="14" rx="4" fill="url(#sg${id})" ${transform}/>
+  <rect x="35" y="58" width="8" height="14" rx="4" fill="url(#sg${id})" ${transform}/>
+  <rect x="17" y="58" width="8" height="14" rx="4" fill="url(#sd${id})" ${transform}/>
+  <rect x="35" y="58" width="8" height="14" rx="4" fill="url(#sd${id})" ${transform}/>
 
-  <!-- Sandals — prominent soles + straps -->
-  <!-- Left sole -->
-  <ellipse cx="21" cy="75.5" rx="10.5" ry="4" fill="#4a2208"/>
-  <ellipse cx="21" cy="74" rx="10" ry="3.2" fill="#8b5a30"/>
-  <!-- Left toe-post strap -->
+  <!-- Sandals — left -->
+  <ellipse cx="21" cy="75.5" rx="10.5" ry="4" fill="#3a1a06"/>
+  <ellipse cx="21" cy="74" rx="10" ry="3.2" fill="#7a4a22"/>
   <rect x="19" y="68.5" width="4" height="5" rx="1.8" fill="#4a2810"/>
-  <!-- Left cross strap -->
   <rect x="11.5" y="71" width="19" height="3.2" rx="1.6" fill="#5a3010"/>
-  <!-- Left buckle detail -->
   <rect x="13.5" y="71.5" width="3" height="2.2" rx="0.8" fill="#7a4820"/>
+  <path d="M13 73 Q21 71.5 29 73" stroke="rgba(255,255,255,0.12)" stroke-width="1" fill="none"/>
 
-  <!-- Right sole -->
-  <ellipse cx="39" cy="75.5" rx="10.5" ry="4" fill="#4a2208"/>
-  <ellipse cx="39" cy="74" rx="10" ry="3.2" fill="#8b5a30"/>
-  <!-- Right toe-post strap -->
+  <!-- Sandals — right -->
+  <ellipse cx="39" cy="75.5" rx="10.5" ry="4" fill="#3a1a06"/>
+  <ellipse cx="39" cy="74" rx="10" ry="3.2" fill="#7a4a22"/>
   <rect x="37" y="68.5" width="4" height="5" rx="1.8" fill="#4a2810"/>
-  <!-- Right cross strap -->
   <rect x="29.5" y="71" width="19" height="3.2" rx="1.6" fill="#5a3010"/>
-  <!-- Right buckle detail -->
   <rect x="43.5" y="71.5" width="3" height="2.2" rx="0.8" fill="#7a4820"/>
+  <path d="M31 73 Q39 71.5 47 73" stroke="rgba(255,255,255,0.12)" stroke-width="1" fill="none"/>
 
   ${preBodySvg}
-  <!-- Cargo shorts (rendered before body so body overlaps the waistband) -->
-  <!-- Left short leg -->
+  <!-- Cargo shorts -->
   <rect x="13" y="58" width="15" height="12" rx="4" fill="#c8a850"/>
-  <!-- Right short leg -->
   <rect x="32" y="58" width="15" height="12" rx="4" fill="#c8a850"/>
-  <!-- Crotch fill -->
   <rect x="27" y="58" width="6" height="12" fill="#c8a850"/>
-  <!-- Waistband -->
-  <rect x="12" y="57" width="36" height="3" rx="1.5" fill="#9a7828"/>
-  <!-- Left cargo pocket -->
+  <rect x="13" y="58" width="34" height="12" rx="2" fill="url(#sh${id})"/>
+  <rect x="12" y="57" width="36" height="3.2" rx="1.5" fill="#9a7828"/>
+  <rect x="12" y="57" width="36" height="1.2" rx="1" fill="rgba(255,255,255,0.2)"/>
   <rect x="14.5" y="62.5" width="6" height="5.5" rx="1.5" fill="#b89040"/>
   <rect x="14.5" y="62.5" width="6" height="1.5" rx="0.8" fill="#9a7828"/>
-  <!-- Right cargo pocket -->
   <rect x="39.5" y="62.5" width="6" height="5.5" rx="1.5" fill="#b89040"/>
   <rect x="39.5" y="62.5" width="6" height="1.5" rx="0.8" fill="#9a7828"/>
 
-  <!-- Body — plump ellipse clipped with rugby stripes -->
+  <!-- Body / rugby shirt -->
   <ellipse cx="30" cy="47" rx="22" ry="16" fill="${s0}"/>
   <clipPath id="pb${id}"><ellipse cx="30" cy="47" rx="22" ry="16"/></clipPath>
   <g clip-path="url(#pb${id})">
-    <rect x="10" y="36" width="40" height="5.5" fill="${s0}"/>
-    <rect x="10" y="41.5" width="40" height="5.5" fill="${s1}"/>
-    <rect x="10" y="47" width="40" height="5.5" fill="${s2}"/>
-    <rect x="10" y="52.5" width="40" height="5.5" fill="${s3}"/>
-    <rect x="10" y="58" width="40" height="5.5" fill="${s0}"/>
-    <rect x="10" y="63.5" width="40" height="5.5" fill="${s1}"/>
+    <rect x="8" y="36" width="44" height="5.5" fill="${s0}"/>
+    <rect x="8" y="41.5" width="44" height="5.5" fill="${s1}"/>
+    <rect x="8" y="47" width="44" height="5.5" fill="${s2}"/>
+    <rect x="8" y="52.5" width="44" height="5.5" fill="${s3}"/>
+    <rect x="8" y="58" width="44" height="5.5" fill="${s0}"/>
+    <ellipse cx="30" cy="47" rx="22" ry="16" fill="url(#bl${id})"/>
   </g>
+  <path d="M12 39 Q22 38 30 40 Q38 42 48 39" stroke="rgba(255,255,255,0.1)" stroke-width="1.5" fill="none"/>
 
   <!-- Collar V -->
   <path d="M26 38 L30 44 L34 38" stroke="white" stroke-width="1.8" fill="none" stroke-linejoin="round"/>
+  <path d="M26 38 L30 44 L34 38" stroke="rgba(0,0,0,0.08)" stroke-width="0.6" fill="none" stroke-linejoin="round"/>
 
   <!-- Arms -->
   <ellipse cx="9" cy="47" rx="5.5" ry="10" fill="${s0}"/>
@@ -274,52 +299,68 @@ function createPeteSVG(heightPx = 80, opts = {}) {
   <g clip-path="url(#la${id})">
     <rect x="3" y="41.5" width="12" height="5.5" fill="${s1}"/>
     <rect x="3" y="52.5" width="12" height="5.5" fill="${s2}"/>
+    <ellipse cx="9" cy="47" rx="5.5" ry="10" fill="url(#bl${id})"/>
   </g>
   <ellipse cx="51" cy="47" rx="5.5" ry="10" fill="${s1}"/>
   <clipPath id="ra${id}"><ellipse cx="51" cy="47" rx="5.5" ry="10"/></clipPath>
   <g clip-path="url(#ra${id})">
     <rect x="45" y="41.5" width="12" height="5.5" fill="${s0}"/>
     <rect x="45" y="52.5" width="12" height="5.5" fill="${s3}"/>
+    <ellipse cx="51" cy="47" rx="5.5" ry="10" fill="url(#bl${id})"/>
   </g>
 
   <!-- Hands -->
-  <circle cx="7" cy="58" r="4.5" fill="#e0a870"/>
-  <circle cx="53" cy="58" r="4.5" fill="#e0a870"/>
+  <circle cx="7" cy="58" r="4.5" fill="url(#sg${id})"/>
+  <circle cx="53" cy="58" r="4.5" fill="url(#sg${id})"/>
+  <circle cx="7" cy="58" r="4.5" fill="url(#sd${id})"/>
+  <circle cx="53" cy="58" r="4.5" fill="url(#sd${id})"/>
+  <path d="M4.5 56.5 Q7 55.5 9.5 56.5" stroke="rgba(150,80,20,0.3)" stroke-width="0.8" fill="none"/>
+  <path d="M50.5 56.5 Q53 55.5 55.5 56.5" stroke="rgba(150,80,20,0.3)" stroke-width="0.8" fill="none"/>
 
   <!-- Neck -->
-  <rect x="24.5" y="32" width="11" height="8" rx="4" fill="#e0a870"/>
+  <rect x="24.5" y="32" width="11" height="8" rx="4" fill="url(#sg${id})"/>
 
-  <!-- Head — broader build (wider than tall) -->
-  <ellipse cx="30" cy="20" rx="21" ry="18" fill="#e0a870"/>
+  <!-- Head -->
+  <ellipse cx="30" cy="20" rx="21" ry="18" fill="url(#sg${id})"/>
+  <ellipse cx="30" cy="20" rx="21" ry="18" fill="url(#sd${id})"/>
+  <ellipse cx="30" cy="28" rx="18" ry="5.5" fill="rgba(140,60,15,0.07)"/>
+  <ellipse cx="30" cy="10" rx="10" ry="5" fill="rgba(255,255,255,0.09)"/>
 
   <!-- Ears -->
-  <ellipse cx="9.5" cy="20" rx="4.5" ry="5.5" fill="#e0a870"/>
-  <ellipse cx="50.5" cy="20" rx="4.5" ry="5.5" fill="#e0a870"/>
+  <ellipse cx="9.5" cy="20" rx="4.5" ry="5.5" fill="url(#sg${id})"/>
+  <ellipse cx="50.5" cy="20" rx="4.5" ry="5.5" fill="url(#sg${id})"/>
   <ellipse cx="9.5" cy="20" rx="2.5" ry="3.5" fill="#c8895a"/>
   <ellipse cx="50.5" cy="20" rx="2.5" ry="3.5" fill="#c8895a"/>
+  <ellipse cx="9.5" cy="20" rx="1.1" ry="1.8" fill="rgba(110,45,10,0.28)"/>
+  <ellipse cx="50.5" cy="20" rx="1.1" ry="1.8" fill="rgba(110,45,10,0.28)"/>
 
-  <!-- Hair (thin grey combover — swept from left across bald top) -->
-  <path d="M9 18 Q24 4 46 12" stroke="#a8a8a8" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <path d="M9 20 Q25 7 45 15" stroke="#a8a8a8" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-  <path d="M10 22 Q27 10 44 18" stroke="#a8a8a8" stroke-width="1.0" fill="none" stroke-linecap="round"/>
-  <!-- Hair origin on left side -->
-  <path d="M9 18 Q7 13 9 9" stroke="#a8a8a8" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-  <path d="M10 20 Q8 15 10 12" stroke="#a8a8a8" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  <!-- Hair (grey combover) -->
+  <path d="M9 18 Q24 4 46 12" stroke="#b0b0b0" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M9 20 Q25 7 45 15" stroke="#b8b8b8" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M10 22 Q27 10 44 18" stroke="#c0c0c0" stroke-width="1.0" fill="none" stroke-linecap="round"/>
+  <path d="M9 18 Q7 13 9 9" stroke="#b0b0b0" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M10 20 Q8 15 10 12" stroke="#b8b8b8" stroke-width="1.2" fill="none" stroke-linecap="round"/>
 
 ${glassesSvg}
 ${eyesSvg}
 
-  <!-- Nose -->
-  <ellipse cx="30" cy="25.5" rx="2.8" ry="2" fill="#c88050"/>
+  <!-- Nose with nostrils -->
+  <path d="M27.5 23 Q30 27.5 32.5 23" stroke="#b07040" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="27.8" cy="25.5" rx="2" ry="1.5" fill="#c88050"/>
+  <ellipse cx="32.2" cy="25.5" rx="2" ry="1.5" fill="#c88050"/>
+  <ellipse cx="27.8" cy="25.8" rx="0.9" ry="0.7" fill="rgba(80,20,0,0.22)"/>
+  <ellipse cx="32.2" cy="25.8" rx="0.9" ry="0.7" fill="rgba(80,20,0,0.22)"/>
 
-  <!-- Smile -->
-  <path d="M18 31 Q30 40 42 31" stroke="#a85e30" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <circle cx="17" cy="30" r="1.2" fill="#c88050"/>
-  <circle cx="43" cy="30" r="1.2" fill="#c88050"/>
+  <!-- Smile with teeth -->
+  <path d="M20 31 Q30 39.5 40 31 Q30 37.5 20 31 Z" fill="#8a3820"/>
+  <path d="M21.5 31.5 Q30 37 38.5 31.5 Q30 36 21.5 31.5 Z" fill="white" opacity="0.82"/>
+  <path d="M20 31 Q30 39.5 40 31" stroke="#8a3820" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <circle cx="18.5" cy="30.5" r="1.3" fill="#c88050"/>
+  <circle cx="41.5" cy="30.5" r="1.3" fill="#c88050"/>
 
   <!-- Cheek blush -->
-  <ellipse cx="12" cy="26" rx="4.5" ry="3" fill="rgba(220,80,50,0.15)"/>
-  <ellipse cx="48" cy="26" rx="4.5" ry="3" fill="rgba(220,80,50,0.15)"/>
+  <ellipse cx="12.5" cy="26.5" rx="4.5" ry="3" fill="rgba(230,80,50,0.13)"/>
+  <ellipse cx="47.5" cy="26.5" rx="4.5" ry="3" fill="rgba(230,80,50,0.13)"/>
 ${hatSvg}${accessorySvg}
 </svg>`;
 

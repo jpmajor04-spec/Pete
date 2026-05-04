@@ -2450,7 +2450,9 @@ function renderHouseSVG(eq) {
 
   // Ceiling light/shadow gradient
   defs += `<linearGradient id="wallShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(0,0,0,0.12)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></linearGradient>
-  <linearGradient id="floorShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(0,0,0,0.18)"/><stop offset="70%" stop-color="rgba(0,0,0,0.04)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></linearGradient>`;
+  <linearGradient id="floorShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(0,0,0,0.18)"/><stop offset="70%" stop-color="rgba(0,0,0,0.04)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></linearGradient>
+  <linearGradient id="lightBeamGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fffbe8" stop-opacity="0.55"/><stop offset="100%" stop-color="#fffbe8" stop-opacity="0.0"/></linearGradient>
+  <filter id="itemShadow" x="-25%" y="-15%" width="160%" height="160%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="rgba(0,0,0,0.38)"/></filter>`;
 
   // ── WALL ITEMS (hang on back wall, y < 155) ──────────────────────────────
   const window_ = `
@@ -2698,6 +2700,7 @@ function renderHouseSVG(eq) {
   ${baseboard}
   ${disco ? wrapDraggable('dec_disco', disco) : ''}
   ${window_}
+  <polygon points="130,74 190,74 248,240 72,240" fill="url(#lightBeamGrad)"/>
   ${wrapDraggable('furn_bookshelf', bookshelf)}${wrapDraggable('furn_fireplace', fireplace)}${wrapDraggable('dec_painting', painting)}${wrapDraggable('dec_clock', clock)}${wrapDraggable('dec_trophy', trophy)}${wrapDraggable('furn_arcade', arcade)}
   ${wrapDraggable('furn_sofa', sofa)}${wrapDraggable('furn_piano', piano)}${wrapDraggable('furn_desk', desk)}
   ${wrapDraggable('dec_lamp', lamp)}${wrapDraggable('dec_fishtank', fishtank)}
@@ -2726,7 +2729,7 @@ function saveItemOffset(id, dx, dy) {
 function wrapDraggable(id, svgContent) {
   if (!svgContent) return '';
   const { dx, dy } = getItemOffset(id);
-  return `<g class="house-draggable" data-item-id="${id}" transform="translate(${dx},${dy})" style="cursor:grab">${svgContent}</g>`;
+  return `<g class="house-draggable" data-item-id="${id}" transform="translate(${dx},${dy})" style="cursor:grab" filter="url(#itemShadow)">${svgContent}</g>`;
 }
 
 function initHouseDrag(svgEl) {
