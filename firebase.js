@@ -135,6 +135,21 @@ async function fbSaveEquipped(equipped) {
   } catch (e) { console.warn('Pete: fbSaveEquipped', e); }
 }
 
+async function fbSaveHouseEquipped(houseEquipped) {
+  if (!fbUser) return;
+  try {
+    await db.collection('users').doc(fbUser.uid).update({ houseEquipped });
+  } catch (e) { console.warn('Pete: fbSaveHouseEquipped', e); }
+}
+
+async function fbGetUserProfile(uid) {
+  try {
+    const snap = await db.collection('users').doc(uid).get();
+    if (!snap.exists) return null;
+    return { id: snap.id, ...snap.data() };
+  } catch (e) { console.warn('Pete: fbGetUserProfile', e); return null; }
+}
+
 async function fbSyncUser(streak) {
   if (!fbUser) return;
   try {

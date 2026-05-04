@@ -2054,7 +2054,7 @@ async function initBattleHub() {
       const wardrobe = e.equipped || {};
       const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 32) : '';
       const onlineDot = `<span class="online-dot ${isOnline ? 'online-dot-active' : ''}"></span>`;
-      html += `<div class="battlehub-friend-row">
+      html += `<div class="battlehub-friend-row" data-uid="${e.id}">
         <div class="battlehub-friend-avatar" style="position:relative">${avatar}${onlineDot}</div>
         <div class="battlehub-friend-name">${e.displayName || 'Anonymous'}</div>
         <button class="battlehub-battle-btn ${isOnline ? '' : 'battlehub-battle-btn-offline'}"
@@ -2066,6 +2066,14 @@ async function initBattleHub() {
     });
 
     body.innerHTML = html;
+
+    // Tap friend row (not button) to view profile
+    body.querySelectorAll('.battlehub-friend-row[data-uid]').forEach(row => {
+      row.addEventListener('click', e => {
+        if (e.target.closest('button')) return;
+        showUserProfile(row.dataset.uid, 'battlehub');
+      });
+    });
 
     body.querySelectorAll('.battlehub-answer-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -2100,7 +2108,7 @@ async function initBattleHub() {
       const wardrobe = r.equipped || {};
       const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
       const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-      html += `<div class="leaderboard-entry">
+      html += `<div class="leaderboard-entry battlehub-lb-row" data-uid="${r.id}">
         <div class="rank-badge ${badgeClass}">${i + 1}</div>
         <div class="lb-avatar">${avatar}</div>
         <div class="leaderboard-name">${r.displayName || 'Anonymous'}</div>
@@ -2108,7 +2116,46 @@ async function initBattleHub() {
       </div>`;
     });
     body.innerHTML = html;
+
+    body.querySelectorAll('.battlehub-lb-row[data-uid]').forEach(row => {
+      row.addEventListener('click', () => showUserProfile(row.dataset.uid, 'battlehub'));
+    });
   }
+}
+
+/* ─── PROFILE SCREEN ────────────────────────────────────────────────────────── */
+
+let _profileBackScreen = 'leaderboard';
+
+async function showUserProfile(uid, backScreen) {
+  _profileBackScreen = backScreen || 'leaderboard';
+  const body = document.getElementById('profileBody');
+  if (!body) return;
+  body.innerHTML = '<div class="profile-loading">Loading…</div>';
+  showScreen('profile');
+
+  const profile = await fbGetUserProfile(uid);
+  if (!profile) {
+    body.innerHTML = '<div class="profile-loading">Could not load profile.</div>';
+    return;
+  }
+
+  const wardrobe = profile.equipped || {};
+  const avatarSVG = createPeteSVG(90, { wardrobe });
+  const houseEq = profile.houseEquipped || { wallpaper: 'wall_cream', flooring: 'floor_oak', items: [] };
+  const houseSVG = renderHouseSVG(houseEq);
+
+  body.innerHTML = `
+    <div class="profile-avatar-wrap">${avatarSVG}</div>
+    <div class="profile-name">${profile.displayName || 'Anonymous'}</div>
+    <div class="profile-stats-grid">
+      <div class="profile-stat"><div class="ps-val">${profile.streak || 0}</div><div class="ps-label">Streak</div></div>
+      <div class="profile-stat"><div class="ps-val">${profile.totalStars || 0}</div><div class="ps-label">Stars</div></div>
+      <div class="profile-stat"><div class="ps-val">${profile.battleWins || 0}</div><div class="ps-label">Battle Wins</div></div>
+    </div>
+    <div class="profile-section-label">Pete's House</div>
+    <div class="profile-house">${houseSVG}</div>
+  `;
 }
 
 /* ─── LEADERBOARD SCREEN ─────────────────────────────────────────────────────── */
@@ -2277,7 +2324,7 @@ function renderLeaderboardTab(tab) {
         const battleBtn = !isMe
           ? `<button class="leaderboard-entry-battle-btn" data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}" data-is-online="${isOnline}">${isOnline ? 'Battle' : 'Offline'}</button>`
           : '';
-        return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}">
+        return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}" data-uid="${e.id}">
           <div class="rank-badge ${badgeClass}">${i + 1}</div>
           <div class="lb-avatar" style="position:relative">${avatar}${onlineDot}</div>
           <div class="leaderboard-name">${e.displayName || 'Anonymous'}${isMe ? ' <span class="lb-you">(you)</span>' : ''}</div>
@@ -2295,6 +2342,14 @@ function renderLeaderboardTab(tab) {
         const opponentName = btn.dataset.opponent;
         const battle = await fbGetBattle(battleId);
         if (battle) startBattle(battleId, 'opponent', { word: battle.word, wordDefinition: battle.wordDefinition }, opponentName);
+      });
+    });
+
+    // Tap entry (not button) to view profile
+    listEl.querySelectorAll('.leaderboard-entry[data-uid]').forEach(row => {
+      row.addEventListener('click', e => {
+        if (e.target.closest('button')) return;
+        showUserProfile(row.dataset.uid, 'leaderboard');
       });
     });
 
@@ -2340,13 +2395,21 @@ function renderLeaderboardTab(tab) {
     const badgeClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
     const wardrobe = isMe ? getEquipped() : (e.equipped || {});
     const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
-    return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}">
+    return `<div class="leaderboard-entry ${isMe ? 'leaderboard-entry-me' : ''}" data-uid="${e.id}">
       <div class="rank-badge ${badgeClass}">${i + 1}</div>
       <div class="lb-avatar">${avatar}</div>
       <div class="leaderboard-name">${e.displayName || 'Anonymous'}${isMe ? ' <span class="lb-you">(you)</span>' : ''}</div>
       <div class="leaderboard-score">${score}</div>
     </div>`;
   }).join('');
+
+  // Tap any entry (but not a button) to view their profile
+  listEl.querySelectorAll('.leaderboard-entry[data-uid]').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('button')) return;
+      showUserProfile(row.dataset.uid, 'leaderboard');
+    });
+  });
 }
 
 /* ─── PETE'S HOUSE ───────────────────────────────────────────────────────────── */
@@ -2413,6 +2476,7 @@ function equipHouseItem(id, type) {
     if (idx >= 0) eq.items.splice(idx, 1); else eq.items.push(id);
   }
   localStorage.setItem('pete_house_equipped', JSON.stringify(eq));
+  if (typeof fbSaveHouseEquipped === 'function') fbSaveHouseEquipped(eq);
   updateHousePreview();
   renderHouseGrid(document.querySelector('.house-tab.active')?.dataset.htab || 'wallpaper');
 }
@@ -3038,6 +3102,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('battlehubBackBtn').addEventListener('click', () => showScreen('home'));
+  document.getElementById('profileBackBtn').addEventListener('click', () => showScreen(_profileBackScreen));
 
   // Intro buttons
   document.getElementById('introKnowBtn').addEventListener('click', handleKnowIt);
