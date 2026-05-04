@@ -378,27 +378,123 @@ function injectPete(containerId, heightPx, opts = {}) {
   if (el) el.innerHTML = createPeteSVG(heightPx, opts);
 }
 
-// Small circular Pete head avatar for leaderboards/friend lists
-function miniPeteIcon(wardrobe = {}, size = 30) {
-  const SHIRT_COLORS = { default: ['#e8934a','#c87030'], red: ['#c83020','#8a1810'], blue: ['#3060c8','#1a3a8a'], green: ['#2a6e46','#1a4a30'], purple: ['#7040b8','#4a2080'], yellow: ['#c8a010','#8a6808'], black: ['#222222','#111111'], white: ['#e8e8e0','#c0c0b8'] };
-  const [sc] = SHIRT_COLORS[wardrobe.shirt || 'default'] || SHIRT_COLORS.default;
+// Full-body mini Pete figure for leaderboards/friend lists
+let _miniId = 0;
+function miniPeteIcon(wardrobe = {}, size = 44) {
+  const id = ++_miniId;
+  const SHIRT_COLORS = { default: '#c82200', red: '#c82200', blue: '#3060c8', green: '#2a6e46', purple: '#7040b8', yellow: '#c8a010', black: '#222222', white: '#e8e8e0' };
+  const sc = SHIRT_COLORS[wardrobe.shirt || 'default'] || '#c82200';
+
+  // Hat SVG positioned over head (head center x=14, top ~y=2)
   let hatSvg = '';
-  if (wardrobe.hat === 'flatcap') hatSvg = `<ellipse cx="15" cy="7" rx="8" ry="3" fill="#6b3e18"/><rect x="7" y="6" width="16" height="3" rx="1.5" fill="#5a3010"/><ellipse cx="20" cy="9" rx="4" ry="1.2" fill="#5a3010"/>`;
-  else if (wardrobe.hat === 'beanie') hatSvg = `<rect x="7" y="4" width="16" height="7" rx="5" fill="${sc}"/>`;
-  else if (wardrobe.hat === 'cowboy') hatSvg = `<ellipse cx="15" cy="9" rx="10" ry="2.5" fill="#8b5a30"/><path d="M8 9 Q8.5 4 15 3.5 Q21.5 4 22 9 Z" fill="#6b3e18"/>`;
-  else if (wardrobe.hat === 'tophat') hatSvg = `<rect x="10" y="1" width="10" height="8" rx="1" fill="#111"/><rect x="7" y="8" width="16" height="2.5" rx="1" fill="#111"/>`;
-  else if (wardrobe.hat === 'gradcap') hatSvg = `<path d="M6 8 L15 3 L24 8 Z" fill="#1a1a4a"/><rect x="9" y="7" width="12" height="4" rx="0.5" fill="#1a1a4a"/>`;
-  else if (wardrobe.hat === 'crown') hatSvg = `<path d="M7 9 L9 4 L12 7 L15 2 L18 7 L21 4 L23 9 Z" fill="#c8a010" stroke="#8a6808" stroke-width="0.6"/><rect x="7" y="9" width="16" height="3" rx="1" fill="#c8a010"/>`;
-  else if (wardrobe.hat === 'pirate') hatSvg = `<path d="M5 10 Q8 5 11 7 Q15 4 19 7 Q22 5 25 10 Z" fill="#181818"/>`;
-  return `<svg width="${size}" height="${size}" viewBox="0 0 30 30" fill="none" style="flex-shrink:0;display:block">
-    <circle cx="15" cy="15" r="14" fill="#f5e0c0" stroke="#d4a870" stroke-width="1.2"/>
-    <ellipse cx="15" cy="14" rx="8.5" ry="9" fill="#f0c890"/>
-    <circle cx="11.5" cy="13.5" r="1.8" fill="#2a1a08"/>
-    <circle cx="18.5" cy="13.5" r="1.8" fill="#2a1a08"/>
-    <circle cx="12" cy="13" r="0.6" fill="white"/>
-    <circle cx="19" cy="13" r="0.6" fill="white"/>
-    <ellipse cx="15" cy="17" rx="2" ry="1.2" fill="#c88050"/>
-    <path d="M11 20 Q15 23 19 20" stroke="#a85e30" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-    ${hatSvg}
-  </svg>`;
+  if (wardrobe.hat === 'flatcap')  hatSvg = `<ellipse cx="14" cy="5" rx="7" ry="2.2" fill="#6b3e18"/><rect x="7" y="4" width="14" height="2.5" rx="1.2" fill="#5a3010"/><ellipse cx="18.5" cy="6.5" rx="3.5" ry="1" fill="#5a3010"/>`;
+  else if (wardrobe.hat === 'beanie')  hatSvg = `<rect x="7" y="1.5" width="14" height="7" rx="5" fill="${sc}"/><rect x="7" y="6.5" width="14" height="2" fill="${sc}"/>`;
+  else if (wardrobe.hat === 'cowboy')  hatSvg = `<ellipse cx="14" cy="6.5" rx="9" ry="2" fill="#8b5a30"/><path d="M7.5 6.5 Q8 2 14 1.5 Q20 2 20.5 6.5 Z" fill="#6b3e18"/>`;
+  else if (wardrobe.hat === 'tophat')  hatSvg = `<rect x="9.5" y="0" width="9" height="7" rx="1" fill="#111"/><rect x="7" y="6.5" width="14" height="2.2" rx="1" fill="#111"/>`;
+  else if (wardrobe.hat === 'gradcap') hatSvg = `<path d="M6 7 L14 2 L22 7 Z" fill="#1a1a4a"/><rect x="9" y="6.5" width="10" height="3" rx="0.5" fill="#1a1a4a"/>`;
+  else if (wardrobe.hat === 'crown')   hatSvg = `<path d="M7 7.5 L9 3 L11.5 5.5 L14 1 L16.5 5.5 L19 3 L21 7.5 Z" fill="#c8a010" stroke="#8a6808" stroke-width="0.5"/><rect x="7" y="7.5" width="14" height="2.2" rx="1" fill="#c8a010"/>`;
+  else if (wardrobe.hat === 'pirate')  hatSvg = `<path d="M5 8 Q8 3.5 11 5.5 Q14 2.5 17 5.5 Q20 3.5 23 8 Z" fill="#181818"/>`;
+
+  const w = Math.round(size * 28 / 48);
+  const h = size;
+
+  return `<svg width="${w}" height="${h}" viewBox="0 0 28 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;display:block">
+  <defs>
+    <radialGradient id="msk${id}" cx="38%" cy="28%" r="70%">
+      <stop offset="0%" stop-color="#f8d0a0"/>
+      <stop offset="55%" stop-color="#e0a06a"/>
+      <stop offset="100%" stop-color="#b87040"/>
+    </radialGradient>
+    <clipPath id="mbody${id}"><ellipse cx="14" cy="29" rx="8" ry="7"/></clipPath>
+    <clipPath id="mla${id}"><ellipse cx="4" cy="29" rx="2.8" ry="5.5"/></clipPath>
+    <clipPath id="mra${id}"><ellipse cx="24" cy="29" rx="2.8" ry="5.5"/></clipPath>
+  </defs>
+
+  <!-- Ground shadow -->
+  <ellipse cx="14" cy="47" rx="7" ry="1.4" fill="rgba(0,0,0,0.12)"/>
+
+  <!-- Legs -->
+  <rect x="8.5" y="36" width="4" height="8" rx="2" fill="url(#msk${id})"/>
+  <rect x="15.5" y="36" width="4" height="8" rx="2" fill="url(#msk${id})"/>
+
+  <!-- Sandals -->
+  <ellipse cx="10.5" cy="45.5" rx="5" ry="1.8" fill="#7a4a22"/>
+  <ellipse cx="17.5" cy="45.5" rx="5" ry="1.8" fill="#7a4a22"/>
+  <rect x="8.5" y="42" width="4" height="3.5" rx="1.5" fill="#5a3010"/>
+  <rect x="15.5" y="42" width="4" height="3.5" rx="1.5" fill="#5a3010"/>
+
+  <!-- Shorts -->
+  <rect x="6" y="33" width="16" height="7" rx="2.5" fill="#c8a850"/>
+  <rect x="6" y="33" width="16" height="2.5" rx="1" fill="#9a7828"/>
+
+  <!-- Body (rugby stripes) -->
+  <ellipse cx="14" cy="29" rx="8" ry="7" fill="${sc}"/>
+  <g clip-path="url(#mbody${id})">
+    <rect x="6" y="22" width="16" height="3.5" fill="${sc}"/>
+    <rect x="6" y="25.5" width="16" height="3.5" fill="#1a7a3a"/>
+    <rect x="6" y="29" width="16" height="3.5" fill="#e8be10"/>
+    <rect x="6" y="32.5" width="16" height="3.5" fill="#1a3aaa"/>
+    <ellipse cx="14" cy="29" rx="8" ry="7" fill="rgba(255,255,255,0.07)"/>
+  </g>
+  <!-- V collar -->
+  <path d="M12 23 L14 26 L16 23" stroke="white" stroke-width="1" fill="none" stroke-linejoin="round"/>
+
+  <!-- Left arm -->
+  <ellipse cx="4" cy="29" rx="2.8" ry="5.5" fill="${sc}"/>
+  <g clip-path="url(#mla${id})">
+    <rect x="1" y="25.5" width="6" height="3.5" fill="#1a7a3a"/>
+    <rect x="1" y="32.5" width="6" height="3.5" fill="#e8be10"/>
+  </g>
+  <!-- Right arm -->
+  <ellipse cx="24" cy="29" rx="2.8" ry="5.5" fill="#1a7a3a"/>
+  <g clip-path="url(#mra${id})">
+    <rect x="21" y="22" width="6" height="3.5" fill="${sc}"/>
+    <rect x="21" y="32.5" width="6" height="3.5" fill="#1a3aaa"/>
+  </g>
+
+  <!-- Hands -->
+  <circle cx="4" cy="35.5" r="2.4" fill="url(#msk${id})"/>
+  <circle cx="24" cy="35.5" r="2.4" fill="url(#msk${id})"/>
+
+  <!-- Neck -->
+  <rect x="11" y="19" width="6" height="5" rx="2.5" fill="url(#msk${id})"/>
+
+  <!-- Ears -->
+  <ellipse cx="5.5" cy="13" rx="2.2" ry="2.8" fill="#e0a06a"/>
+  <ellipse cx="22.5" cy="13" rx="2.2" ry="2.8" fill="#e0a06a"/>
+  <ellipse cx="5.5" cy="13" rx="1" ry="1.6" fill="#c8895a"/>
+  <ellipse cx="22.5" cy="13" rx="1" ry="1.6" fill="#c8895a"/>
+
+  <!-- Head -->
+  <ellipse cx="14" cy="12" rx="8.5" ry="9.5" fill="url(#msk${id})"/>
+
+  <!-- Grey combover hair -->
+  <path d="M5.5 10 Q13 1 22 6" stroke="#b8b8b8" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <path d="M5.5 11.5 Q14 3 21 7.5" stroke="#c0c0c0" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M5.5 10 Q4.5 6 6 3.5" stroke="#b0b0b0" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+
+  <!-- Glasses frames -->
+  <rect x="4.5" y="9" width="8" height="6" rx="1.6" fill="rgba(200,230,255,0.32)" stroke="#2a1808" stroke-width="1.6"/>
+  <rect x="15.5" y="9" width="8" height="6" rx="1.6" fill="rgba(200,230,255,0.32)" stroke="#2a1808" stroke-width="1.6"/>
+  <line x1="12.5" y1="12" x2="15.5" y2="12" stroke="#2a1808" stroke-width="1.4"/>
+  <line x1="4.5" y1="11" x2="3" y2="9.5" stroke="#2a1808" stroke-width="1.4"/>
+  <line x1="23.5" y1="11" x2="25" y2="9.5" stroke="#2a1808" stroke-width="1.4"/>
+
+  <!-- Eyes -->
+  <circle cx="8.5" cy="12" r="1.8" fill="#6b4020"/>
+  <circle cx="8.5" cy="12" r="1.1" fill="#1a1008"/>
+  <circle cx="9.1" cy="11.3" r="0.6" fill="white"/>
+  <circle cx="19.5" cy="12" r="1.8" fill="#6b4020"/>
+  <circle cx="19.5" cy="12" r="1.1" fill="#1a1008"/>
+  <circle cx="20.1" cy="11.3" r="0.6" fill="white"/>
+
+  <!-- Nose -->
+  <path d="M12 15.5 Q14 17.5 16 15.5" stroke="#b07040" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+
+  <!-- Smile -->
+  <path d="M9 19 Q14 22.5 19 19" stroke="#8a3820" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+  <!-- Hat -->
+  ${hatSvg}
+</svg>`;
 }

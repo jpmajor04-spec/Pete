@@ -455,7 +455,7 @@ body::before {
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .nav-coins-btn {
@@ -468,7 +468,7 @@ body::before {
   color: var(--gold);
   background: var(--gold-subtle);
   border: 1px solid rgba(138,106,16,0.2);
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 100px;
   cursor: pointer;
   transition: all var(--transition);
@@ -512,24 +512,23 @@ body::before {
 }
 
 .nav-history-btn {
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  background: none;
-  border: 1px solid var(--border);
-  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--gold-subtle);
+  border: 1px solid rgba(138,106,16,0.2);
   border-radius: 100px;
   cursor: pointer;
   transition: all var(--transition);
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .nav-history-btn:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-subtle);
+  background: rgba(138,106,16,0.15);
+  transform: scale(1.08);
 }
 
 /* ─── MAIN / SCREENS ────────────────────────────────────────────────────────── */
@@ -2671,11 +2670,11 @@ body::before {
 }
 
 .lb-avatar {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 44px;
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   position: relative;
 }

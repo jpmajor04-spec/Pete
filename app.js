@@ -782,16 +782,21 @@ function evaluateSentence(sentence, word) {
   const basicComplex = /[,;:]/.test(sentence) ||
     /\b(because|although|despite|however|whereas|while|since|though|even though|as a result|which|who)\b/i.test(sentence);
 
-  // 5-star requires these additional checks
+  // 5-star path A: sophisticated writing — advanced punctuation + rich connectives
   const advancedPunct = /[;:]/.test(sentence) || (sentence.match(/,/g) || []).length >= 2;
   const richConnectives = /\b(although|despite|whereas|however|nevertheless|notwithstanding|consequently|furthermore|moreover|insofar|inasmuch|hitherto|thereupon)\b/i.test(sentence);
+
+  // 5-star path B: compelling story with a clear trajectory
+  const temporalFlow = /\b(first|then|finally|eventually|suddenly|before|after|until|once|meanwhile|afterwards|later|next|soon)\b/i.test(sentence);
+  const changeWords = /\b(realized|discovered|decided|transformed|changed|learned|found|understood|became|turned|led|caused|reminded|showed|proved|inspired|taught)\b/i.test(sentence);
+  const storyTrajectory = temporalFlow && changeWords;
 
   let score = 1;
   if (len >= 8) score = 2;
   if (len >= 12 && (personal || basicComplex)) score = 3;
   if (len >= 16 && personal && basicComplex) score = 4;
-  // 5 stars: genuinely exceptional — long, personal, complex, advanced punctuation, rich connectives
-  if (len >= 22 && personal && basicComplex && advancedPunct && richConnectives) score = 5;
+  // 5 stars: sophisticated writing OR a compelling story with narrative arc
+  if (len >= 18 && personal && basicComplex && ((advancedPunct && richConnectives) || storyTrajectory)) score = 5;
 
   score = Math.min(5, Math.max(1, score));
   const level = EVAL_LEVELS[score - 1];

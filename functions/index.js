@@ -62,10 +62,10 @@ exports.onBattleCreated = onDocumentCreated('battles/{battleId}', async (event) 
 // ─── 2. Five-star sentence notification ──────────────────────────────────────
 exports.onFiveStarEarned = onDocumentCreated('five_stars/{docId}', async (event) => {
   const data = event.data.data();
-  if (!data || !data.uid || !data.word) return;
+  if (!data || !data.userId || !data.word) return;
 
   // Get the earner's display name
-  const earnerSnap = await db.collection('users').doc(data.uid).get();
+  const earnerSnap = await db.collection('users').doc(data.userId).get();
   if (!earnerSnap.exists) return;
   const earnerName = earnerSnap.data().displayName || 'Someone';
 
@@ -116,7 +116,7 @@ exports.sendDailyReminder = onSchedule('0 18 * * *', async () => {
   await Promise.all(promises);
 });
 
-// ─── 3. Streak warning (8pm — if no practice today and streak > 0) ────────────
+// ─── 4. Streak warning (8pm — if no practice today and streak > 0) ────────────
 exports.sendStreakWarning = onSchedule('0 20 * * *', async () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
