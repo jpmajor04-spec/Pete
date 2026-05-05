@@ -920,6 +920,12 @@ function initToday() {
 }
 
 function handleStartPractice() {
+  // In free play mode always start from scratch — don't use today's progress
+  if (state.freePlayMode) {
+    initSpelling();
+    showScreen('spelling');
+    return;
+  }
   const record = getTodayRecord();
   if (record.sentencePassed) {
     initChallenge();
@@ -1318,7 +1324,7 @@ function initChallenge() {
   const actionsBlock = document.getElementById('challengeActions');
   const messageCard = document.querySelector('.share-message-card');
 
-  if (record.challenged) {
+  if (!state.freePlayMode && record.challenged) {
     completeBlock.classList.remove('hidden');
     shareGrid.classList.add('hidden');
     if (messageCard) messageCard.classList.add('hidden');
@@ -3217,7 +3223,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('shareCopyBtn').addEventListener('click', shareCopy);
   document.getElementById('challengeDoneBtn').addEventListener('click', markChallenged);
   document.getElementById('challengeSkipBtn').addEventListener('click', () => {
+    if (state.freePlayMode) { startFreePlay(); return; }
     showToast('Come back tomorrow!');
+    initHome();
     showScreen('home');
   });
 
