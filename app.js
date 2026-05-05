@@ -288,6 +288,15 @@ async function initWotw() {
     }));
   }
 
+  // Deduplicate by userId+word — same person shouldn't appear twice for same word
+  const _wotwSeen = new Set();
+  entries = entries.filter(e => {
+    const key = `${e.userId || e.displayName}_${e.word}`;
+    if (_wotwSeen.has(key)) return false;
+    _wotwSeen.add(key);
+    return true;
+  });
+
   if (wotwEl) {
     const bubble = entries.length === 0 ? 'Be the first!' : 'Legends!';
     wotwEl.innerHTML = createPeteSVG(80, { bubble, wardrobe });
