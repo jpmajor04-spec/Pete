@@ -2293,6 +2293,13 @@ body::before {
   color: var(--text-muted);
 }
 
+.wotw-entry-def {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
 .wotw-entry-sentence {
   font-size: 15px;
   color: var(--text-secondary);

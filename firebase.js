@@ -52,6 +52,8 @@ async function fbInit() {
             streak: 0,
             totalStars: 0,
             totalFiveStars: 0,
+            battleWins: 0,
+            trophies: 0,
             friendIds: [],
             lastActive: firebase.firestore.FieldValue.serverTimestamp()
           });
@@ -89,18 +91,40 @@ async function fbRecordBattleWin() {
   if (!fbUser) return;
   try {
     await db.collection('users').doc(fbUser.uid).update({
-      battleWins: firebase.firestore.FieldValue.increment(1)
+      battleWins: firebase.firestore.FieldValue.increment(1),
+      trophies: firebase.firestore.FieldValue.increment(30)
     });
   } catch (e) { console.warn('Pete: fbRecordBattleWin', e); }
+}
+
+async function fbRecordBattleLoss() {
+  if (!fbUser) return;
+  try {
+    await db.runTransaction(async tx => {
+      const ref = db.collection('users').doc(fbUser.uid);
+      const snap = await tx.get(ref);
+      const current = (snap.data() && snap.data().trophies) || 0;
+      tx.update(ref, { trophies: Math.max(0, current - 10) });
+    });
+  } catch (e) { console.warn('Pete: fbRecordBattleLoss', e); }
+}
+
+async function fbUpdateLastActive() {
+  if (!fbUser) return;
+  try {
+    await db.collection('users').doc(fbUser.uid).update({
+      lastActive: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (e) {} // silent — presence heartbeat
 }
 
 async function fbGetBattleLeaderboard() {
   try {
     const snap = await db.collection('users')
-      .orderBy('battleWins', 'desc')
+      .orderBy('trophies', 'desc')
       .limit(20)
       .get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => (u.battleWins || 0) > 0);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => (u.trophies || 0) > 0);
   } catch (e) { console.warn('Pete: fbGetBattleLeaderboard', e); return []; }
 }
 
@@ -292,13 +316,12 @@ async function fbSendFriendRequest(code) {
     if (myData.friendIds && myData.friendIds.includes(friendId)) {
       return { error: 'Already friends!' };
     }
-    // Check if a pending request already exists
+    // Check if a pending request already exists (single-field query to avoid composite index)
     const existingReq = await db.collection('friend_requests')
       .where('from', '==', fbUser.uid)
-      .where('to', '==', friendId)
-      .where('status', '==', 'pending')
-      .limit(1).get();
-    if (!existingReq.empty) return { error: 'Request already sent!' };
+      .limit(20).get();
+    const alreadySent = existingReq.docs.some(d => d.data().to === friendId && d.data().status === 'pending');
+    if (alreadySent) return { error: 'Request already sent!' };
     const myName = localStorage.getItem('pete_nickname') || 'Someone';
     await db.collection('friend_requests').add({
       from: fbUser.uid,
@@ -315,11 +338,12 @@ async function fbSendFriendRequest(code) {
 async function fbGetFriendRequests() {
   if (!fbUser) return [];
   try {
+    // Single-field query only — avoids needing a composite Firestore index
     const snap = await db.collection('friend_requests')
       .where('to', '==', fbUser.uid)
-      .where('status', '==', 'pending')
-      .limit(10).get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      .limit(20).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(d => d.status === 'pending');
   } catch (e) { console.warn('Pete: fbGetFriendRequests', e); return []; }
 }
 

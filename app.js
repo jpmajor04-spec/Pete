@@ -66,6 +66,7 @@ const state = {
   userSentence: '',
   revealed: false,
   introOffset: 0,  // session-only: how many "know it" skips this session
+  freePlayMode: false,
 };
 
 /* ─── WARDROBE CATALOG ───────────────────────────────────────────────────────── */
@@ -313,6 +314,8 @@ async function initWotw() {
     const dateStr = e.date?.toDate
       ? e.date.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       : (e.date || '');
+    const wordData = typeof WORDS !== 'undefined' ? WORDS.find(w => w.word.toLowerCase() === (e.word || '').toLowerCase()) : null;
+    const defLine = wordData ? `<div class="wotw-entry-def">${wordData.definition}</div>` : '';
     return `
     <div class="wotw-entry ${i === 0 ? 'wotw-entry-top' : ''}">
       <div class="wotw-entry-header">
@@ -320,6 +323,7 @@ async function initWotw() {
         <span class="wotw-entry-stars">★★★★★</span>
         <span class="wotw-entry-date">${e.displayName || 'Anonymous'} · ${dateStr}</span>
       </div>
+      ${defLine}
       <div class="wotw-entry-sentence">"${e.sentence}"</div>
     </div>`;
   }).join('');
@@ -464,6 +468,7 @@ const HOME_SUBTITLES = [
 ];
 
 function initHome() {
+  state.freePlayMode = false;
   const wardrobe = getWardrobeForPete();
   const peteEl = document.getElementById('peteHome');
   const greeting = PETE_GREETINGS[Math.floor(Math.random() * PETE_GREETINGS.length)];
@@ -862,11 +867,9 @@ function showEvaluation(result) {
 /* ─── TODAY SCREEN ───────────────────────────────────────────────────────────── */
 
 function initToday() {
-  state.word = getTodayWord();
+  if (!state.freePlayMode) state.word = getTodayWord();
   const w = state.word;
-  const record = getTodayRecord();
 
-  document.getElementById('todayDate').textContent = formatDate(new Date());
   document.getElementById('todayPos').textContent = w.partOfSpeech;
   document.getElementById('todayWord').textContent = w.word;
   document.getElementById('todayPronunciation').textContent = w.pronunciation;
@@ -874,26 +877,47 @@ function initToday() {
   document.getElementById('todayEtymology').textContent = w.etymology;
   document.getElementById('todayExample').textContent = `"${w.example}"`;
 
-  // Update progress dots
-  const steps = document.querySelectorAll('.progress-step');
-  if (record.spellPassed) steps[0].classList.add('done');
-  if (record.quizPassed) steps[1].classList.add('done');
-  if (record.sentencePassed) steps[2].classList.add('done');
-  if (record.challenged) steps[3].classList.add('done');
-
-  // Update button label if already started
   const btn = document.getElementById('startPracticeBtn');
-  if (record.challenged) {
-    btn.textContent = '✓ Completed today';
-    btn.disabled = true;
-  } else if (record.sentencePassed) {
-    btn.innerHTML = 'Continue to Challenge <span class="btn-arrow">→</span>';
-  } else if (record.spellPassed) {
-    btn.innerHTML = 'Continue Practice <span class="btn-arrow">→</span>';
+  const progressBar = document.querySelector('.today-progress-bar');
+  const todayLabel = document.querySelector('.today-label');
+
+  if (state.freePlayMode) {
+    document.getElementById('todayDate').textContent = '';
+    if (todayLabel) todayLabel.textContent = '✨ Free Play';
+    btn.innerHTML = 'Next Word <span class="btn-arrow">→</span>';
+    btn.disabled = false;
+    if (progressBar) progressBar.style.display = 'none';
+  } else {
+    document.getElementById('todayDate').textContent = formatDate(new Date());
+    if (todayLabel) todayLabel.textContent = "Today's Word";
+    if (progressBar) progressBar.style.display = '';
+
+    const record = getTodayRecord();
+    const steps = document.querySelectorAll('.progress-step');
+    steps.forEach(s => s.classList.remove('done'));
+    if (record.spellPassed) steps[0].classList.add('done');
+    if (record.quizPassed) steps[1].classList.add('done');
+    if (record.sentencePassed) steps[2].classList.add('done');
+    if (record.challenged) steps[3].classList.add('done');
+
+    if (record.challenged) {
+      btn.textContent = '✓ Completed today';
+      btn.disabled = true;
+    } else if (record.sentencePassed) {
+      btn.innerHTML = 'Continue to Challenge <span class="btn-arrow">→</span>';
+      btn.disabled = false;
+    } else if (record.spellPassed) {
+      btn.innerHTML = 'Continue Practice <span class="btn-arrow">→</span>';
+      btn.disabled = false;
+    } else {
+      btn.innerHTML = 'Start Practice <span class="btn-arrow">→</span>';
+      btn.disabled = false;
+    }
   }
 }
 
 function handleStartPractice() {
+  if (state.freePlayMode) { startFreePlay(); return; }
   const record = getTodayRecord();
   if (record.sentencePassed) {
     initChallenge();
@@ -1678,8 +1702,12 @@ function startRevision(wordObjects, sourceScreen = 'practice', freePlay = false)
 }
 
 function startFreePlay() {
-  const shuffled = [...WORDS].sort(() => Math.random() - 0.5).slice(0, 20);
-  startRevision(shuffled, 'home', true);
+  const todayWord = getTodayWord();
+  const pool = WORDS.filter(w => w.word !== todayWord.word);
+  state.word = pool[Math.floor(Math.random() * pool.length)];
+  state.freePlayMode = true;
+  initToday();
+  showScreen('today');
 }
 
 function renderRevisionQuestion() {
@@ -2015,8 +2043,11 @@ function showBattleResults(myScore, mySentence, theirScore, theirSentence, oppon
       <button class="btn btn-primary" id="battleFinishBtn">Back to Home</button>
     </div>`;
   document.getElementById('battleFinishBtn').addEventListener('click', () => { initHome(); showScreen('home'); });
-  // Track win
-  if (won && typeof fbRecordBattleWin === 'function') fbRecordBattleWin();
+  // Track result: +30 trophies for win, -10 for loss
+  if (!tied) {
+    if (won && typeof fbRecordBattleWin === 'function') fbRecordBattleWin();
+    else if (!won && typeof fbRecordBattleLoss === 'function') fbRecordBattleLoss();
+  }
 }
 
 /* ─── BATTLE HUB SCREEN ──────────────────────────────────────────────────────── */
@@ -2117,7 +2148,7 @@ async function initBattleHub() {
       body.innerHTML = '<div class="battlehub-empty">No battles completed yet — challenge a friend!</div>';
       return;
     }
-    let html = '<div class="battlehub-lb-title">Most Battles Won</div>';
+    let html = '<div class="battlehub-lb-title">📚 Trophy Ladder</div>';
     rows.forEach((r, i) => {
       const wardrobe = r.equipped || {};
       const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
@@ -2126,7 +2157,7 @@ async function initBattleHub() {
         <div class="rank-badge ${badgeClass}">${i + 1}</div>
         <div class="lb-avatar">${avatar}</div>
         <div class="leaderboard-name">${r.displayName || 'Anonymous'}</div>
-        <div class="leaderboard-score">${r.battleWins || 0} win${(r.battleWins || 0) !== 1 ? 's' : ''}</div>
+        <div class="leaderboard-score">📚 ${r.trophies || 0}</div>
       </div>`;
     });
     body.innerHTML = html;
@@ -2165,7 +2196,7 @@ async function showUserProfile(uid, backScreen) {
     <div class="profile-stats-grid">
       <div class="profile-stat"><div class="ps-val">${profile.streak || 0}</div><div class="ps-label">Streak</div></div>
       <div class="profile-stat"><div class="ps-val">${profile.totalStars || 0}</div><div class="ps-label">Stars</div></div>
-      <div class="profile-stat"><div class="ps-val">${profile.battleWins || 0}</div><div class="ps-label">Battle Wins</div></div>
+      <div class="profile-stat"><div class="ps-val">📚 ${profile.trophies || 0}</div><div class="ps-label">Trophies</div></div>
     </div>
     <div class="profile-section-label">Pete's House</div>
     <div class="profile-house">${houseSVG}</div>
@@ -3036,6 +3067,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof fbInit === 'function') fbInit().then(() => {
     // Request push notification permission after Firebase is ready
     initPushNotifications();
+    // Online presence heartbeat — update lastActive every 2 minutes
+    if (typeof fbUpdateLastActive === 'function') {
+      fbUpdateLastActive();
+      setInterval(() => { if (typeof fbUpdateLastActive === 'function') fbUpdateLastActive(); }, 2 * 60 * 1000);
+    }
   });
 
   // Check if app needs updating (non-blocking)
