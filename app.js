@@ -546,6 +546,9 @@ function showMastered(word, coinsEarned) {
   const wordEl = document.getElementById('masteredWord');
   if (wordEl) wordEl.textContent = word;
 
+  const homeBtn = document.getElementById('masteredHomeBtn');
+  if (homeBtn) homeBtn.textContent = state.freePlayMode ? 'Next Word →' : 'Back to home';
+
   const coinsEl = document.getElementById('masteredCoins');
   if (coinsEl) coinsEl.innerHTML = coinsEarned > 0 ? `+${coinsEarned} <svg width="20" height="20" viewBox="0 0 18 18" fill="none" style="vertical-align:middle"><circle cx="9" cy="9" r="8" fill="#c8a010" stroke="#8a6808" stroke-width="1.2"/><circle cx="9" cy="9" r="5.8" fill="#d4b828"/><path d="M9 5C10.7 5 12 6 12 7.5C12 8.5 11.3 9.2 10.2 9.5C11.4 9.8 12.2 10.6 12.2 11.8C12.2 13.3 10.9 14 9 14C7.1 14 5.8 13.3 5.8 11.8H7.2C7.2 12.4 7.9 12.8 9 12.8C10 12.8 10.7 12.4 10.7 11.7C10.7 11 10 10.6 9 10.6H8V9.4H9C9.9 9.4 10.5 9 10.5 8.3C10.5 7.6 9.8 7.2 9 7.2C8.1 7.2 7.5 7.6 7.5 8.2H6.2C6.2 6.8 7.4 5 9 5Z" fill="#8a6808"/></svg>` : '';
 
@@ -884,7 +887,7 @@ function initToday() {
   if (state.freePlayMode) {
     document.getElementById('todayDate').textContent = '';
     if (todayLabel) todayLabel.textContent = '✨ Free Play';
-    btn.innerHTML = 'Next Word <span class="btn-arrow">→</span>';
+    btn.innerHTML = 'Start Practice <span class="btn-arrow">→</span>';
     btn.disabled = false;
     if (progressBar) progressBar.style.display = 'none';
   } else {
@@ -917,7 +920,6 @@ function initToday() {
 }
 
 function handleStartPractice() {
-  if (state.freePlayMode) { startFreePlay(); return; }
   const record = getTodayRecord();
   if (record.sentencePassed) {
     initChallenge();
@@ -1336,18 +1338,16 @@ function initChallenge() {
 }
 
 function markChallenged() {
-  const wasAlreadyChallenged = getTodayRecord().challenged;
-  saveProgress({ challenged: true });
-  updateProgressDots();
-
   let coinsEarned = 0;
-  if (!wasAlreadyChallenged) {
-    coinsEarned = 5;
-    earnCoins(5);
-    updateStreak();
-    // Sync progress to Firebase
-    if (typeof fbSyncUser === 'function') {
-      fbSyncUser(getStreak().count);
+  if (!state.freePlayMode) {
+    const wasAlreadyChallenged = getTodayRecord().challenged;
+    saveProgress({ challenged: true });
+    updateProgressDots();
+    if (!wasAlreadyChallenged) {
+      coinsEarned = 5;
+      earnCoins(5);
+      updateStreak();
+      if (typeof fbSyncUser === 'function') fbSyncUser(getStreak().count);
     }
   }
 
@@ -3111,6 +3111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('practiceBackBtn').addEventListener('click', () => showScreen('home'));
   document.getElementById('masteredHomeBtn').addEventListener('click', () => {
+    if (state.freePlayMode) { startFreePlay(); return; }
     initHome();
     showScreen('home');
   });
