@@ -8,10 +8,10 @@ workflows:
       groups:
         - ios-credentials
       vars:
-        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.jesse.peteapp"
-      xcode: latest
+      xcode: 16.3
       cocoapods: default
     triggering:
       events:
@@ -52,7 +52,7 @@ workflows:
       - name: Build iOS
         script: |
           xcode-project build-ipa \
-            --project "$XCODE_PROJECT" \
+            --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
