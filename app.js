@@ -2,29 +2,35 @@
 async function initPushNotifications() {
   try {
     if (!window.Capacitor || !window.Capacitor.isNativePlatform()) return;
-    const { PushNotifications } = window.Capacitor.Plugins;
+    const { FirebaseMessaging, PushNotifications } = window.Capacitor.Plugins;
+    const navMap = { battle: 'battlehub', friends: 'leaderboard', home: 'home', tournament: 'battlehub' };
+
+    if (FirebaseMessaging) {
+      // @capacitor-firebase/messaging — gives proper FCM registration tokens
+      const perm = await FirebaseMessaging.requestPermissions();
+      if (perm.receive !== 'granted') return;
+      const { token } = await FirebaseMessaging.getToken();
+      if (token && typeof fbSaveFCMToken === 'function') await fbSaveFCMToken(token);
+      FirebaseMessaging.addListener('notificationActionPerformed', action => {
+        const d = (action.notification && action.notification.data) || {};
+        const target = navMap[d.screen];
+        if (target) showScreen(target);
+      });
+      return;
+    }
+
     if (!PushNotifications) return;
-
-    const permResult = await PushNotifications.requestPermissions();
-    if (permResult.receive !== 'granted') return;
-
+    // @capacitor/push-notifications fallback — APNs token (Firebase auto-maps if GoogleService-Info.plist present)
+    const perm = await PushNotifications.requestPermissions();
+    if (perm.receive !== 'granted') return;
     await PushNotifications.register();
-
     PushNotifications.addListener('registration', async ({ value: token }) => {
       if (typeof fbSaveFCMToken === 'function') await fbSaveFCMToken(token);
     });
-
-    PushNotifications.addListener('pushNotificationReceived', notification => {
-      console.log('Pete: notification received', notification);
-    });
-
     PushNotifications.addListener('pushNotificationActionPerformed', action => {
-      const data = action.notification.data;
-      if (data && data.screen) {
-        const screenMap = { battle: 'battle', friends: 'friends', home: 'home' };
-        const target = screenMap[data.screen];
-        if (target) showScreen(target);
-      }
+      const d = (action.notification && action.notification.data) || {};
+      const target = navMap[d.screen];
+      if (target) showScreen(target);
     });
   } catch (e) { console.warn('Pete: push notifications init failed', e); }
 }
@@ -799,27 +805,82 @@ function evaluateSentence(sentence, word) {
   const basicComplex = /[,;:]/.test(sentence) ||
     /\b(because|although|despite|however|whereas|while|since|though|even though|as a result|which|who)\b/i.test(sentence);
 
-  // 5-star path A: sophisticated writing — advanced punctuation + rich connectives
-  const advancedPunct = /[;:]/.test(sentence) || (sentence.match(/,/g) || []).length >= 2;
+  // 5-star: both advanced punctuation AND rare connective required — no easy paths
+  const advancedPunct = /[;:]/.test(sentence) || (sentence.match(/,/g) || []).length >= 3;
   const richConnectives = /\b(although|despite|whereas|however|nevertheless|notwithstanding|consequently|furthermore|moreover|insofar|inasmuch|hitherto|thereupon)\b/i.test(sentence);
-
-  // 5-star path B: compelling story with a clear trajectory
-  const temporalFlow = /\b(first|then|finally|eventually|suddenly|before|after|until|once|meanwhile|afterwards|later|next|soon)\b/i.test(sentence);
-  const changeWords = /\b(realized|discovered|decided|transformed|changed|learned|found|understood|became|turned|led|caused|reminded|showed|proved|inspired|taught)\b/i.test(sentence);
-  const storyTrajectory = temporalFlow && changeWords;
 
   let score = 1;
   if (len >= 8) score = 2;
   if (len >= 12 && (personal || basicComplex)) score = 3;
   if (len >= 16 && personal && basicComplex) score = 4;
-  // 5 stars: sophisticated writing OR a compelling story with narrative arc
-  if (len >= 18 && personal && basicComplex && ((advancedPunct && richConnectives) || storyTrajectory)) score = 5;
+  // 5 stars: ≥22 words, personal voice, grammatical complexity, advanced punctuation AND rare connective
+  if (len >= 22 && personal && basicComplex && advancedPunct && richConnectives) score = 5;
 
   score = Math.min(5, Math.max(1, score));
   const level = EVAL_LEVELS[score - 1];
   const comment = level.comments[Math.floor(Math.random() * level.comments.length)];
 
   return { score, label: level.label, comment, coinBonus: level.coinBonus };
+}
+
+/* ─── 100-POINT BATTLE / TOURNAMENT SCORING ──────────────────────────────────── */
+function scoreSentenceDetailed(sentence, word) {
+  if (!sentence || !sentence.trim()) return { score: 0, feedback: ['No sentence written.'] };
+  const lower = sentence.toLowerCase();
+  if (!lower.includes((word || '').toLowerCase())) {
+    return { score: 0, feedback: [`The word "${word}" must appear in your sentence.`] };
+  }
+  const words = sentence.trim().split(/\s+/).filter(Boolean);
+  const len = words.length;
+  const feedback = [];
+  let score = 0;
+
+  // 1. Word integration (0–20)
+  score += 10;
+  const afterWord = sentence.slice(lower.indexOf(word.toLowerCase()) + word.length).trim();
+  if (afterWord.length > 8) { score += 10; feedback.push(`"${word}" is well-embedded with strong surrounding context.`); }
+  else { score += 4; feedback.push(`Try placing "${word}" earlier so more context follows it.`); }
+
+  // 2. Length & substance (0–20)
+  if (len >= 22)       { score += 20; feedback.push('Excellent length — a fully developed idea.'); }
+  else if (len >= 16)  { score += 15; feedback.push('Good length, a touch more detail would elevate it.'); }
+  else if (len >= 11)  { score += 9;  feedback.push('Decent length — aim to expand your idea further.'); }
+  else if (len >= 7)   { score += 4;  feedback.push('Too brief — try to develop the thought more.'); }
+  else                 { feedback.push('Very short — aim for at least 10 words.'); }
+
+  // 3. Grammatical complexity (0–25)
+  let gram = 0;
+  if (/\b(because|although|since|while|when|if|unless|until|though|even though|whereas|despite|after|before|once)\b/i.test(sentence)) {
+    gram += 10; feedback.push('Strong subordinate clause shows grammatical range.');
+  }
+  if (/\b(which|who|whose|whom)\b/i.test(sentence)) gram += 5;
+  if (/[;]/.test(sentence)) { gram += 8; feedback.push('Confident semicolon use.'); }
+  else if ((sentence.match(/,/g) || []).length >= 2) gram += 5;
+  if (/—/.test(sentence)) { gram += 3; feedback.push('Nice em-dash for emphasis.'); }
+  score += Math.min(25, gram);
+
+  // 4. Vocabulary richness (0–20)
+  if (/\b(profound|eloquent|subtle|nuanced|intricate|compelling|formidable|meticulous|extraordinary|ephemeral|quintessential|unprecedented|visceral|poignant|tenacious|resilient|volatile|catalyst|inevitable|ambivalent|pragmatic|transcend|permeate|embody|manifest)\b/i.test(sentence)) {
+    score += 20; feedback.push('Impressive vocabulary — sophisticated word choices.');
+  } else if (/\b(significant|consider|reflect|challenge|complex|demonstrate|reveal|represent|achieve|pursue|transform|overcome|navigate|inspire|perspective|genuine|meaningful|deliberate)\b/i.test(sentence)) {
+    score += 11; feedback.push('Good vocabulary — push for even richer word choices.');
+  } else {
+    score += 3; feedback.push('Try for more distinctive, precise vocabulary.');
+  }
+
+  // 5. Personal voice & engagement (0–15)
+  const hasPersonal = /\b(i|my|me|we|our)\b/i.test(sentence);
+  const hasEmotional = /\b(realized|discovered|felt|remembered|imagined|wondered|feared|hoped|believed|struggled|decided|learned|longed|cherished|regret|admire)\b/i.test(sentence);
+  if (hasPersonal && hasEmotional) { score += 15; feedback.push('Strong personal voice with genuine emotional depth.'); }
+  else if (hasPersonal)            { score += 8;  feedback.push('Good personal voice — add an emotional or reflective dimension.'); }
+  else if (hasEmotional)           { score += 7;  feedback.push('Good emotional depth — try adding your own perspective.'); }
+  else                             { score += 2;  feedback.push('Bring in your own voice or experience to make it memorable.'); }
+
+  // Small noise to avoid ties (±0.4)
+  const noise = Math.round((Math.random() * 0.8 - 0.4) * 10) / 10;
+  score = Math.min(100, Math.max(0, Math.round((score + noise) * 10) / 10));
+
+  return { score, feedback: feedback.slice(0, 4) };
 }
 
 function showEvaluation(result) {
@@ -1891,10 +1952,7 @@ function pickBattleWord() {
 }
 
 function scoreBattleSentence(sentence, word) {
-  if (!sentence || !sentence.trim()) return 0;
-  if (!sentence.toLowerCase().includes(word.toLowerCase())) return 0;
-  const { score } = evaluateSentence(sentence, word);
-  return score * 20; // 1–5 stars → 20–100
+  return scoreSentenceDetailed(sentence, word).score;
 }
 
 const battleState = {
@@ -1991,31 +2049,35 @@ function renderBattleChallenge() {
 async function submitBattleSentence(sentence) {
   clearInterval(battleState.timerInterval);
   const { battleId, role, word, opponentName } = battleState;
-  const score = scoreBattleSentence(sentence, word);
+  const { score, feedback } = scoreSentenceDetailed(sentence, word);
+  const feedbackHtml = feedback.map(f => `<div class="battle-feedback-item">• ${f}</div>`).join('');
 
   document.getElementById('battleBody').innerHTML = `
     <div class="battle-waiting">
       <div class="battle-score-big">${score}<span>/100</span></div>
       <div class="battle-waiting-label">Your score</div>
       <div class="battle-waiting-sentence">"${sentence || '(no sentence)'}"</div>
+      <div class="battle-feedback-list">${feedbackHtml}</div>
       <div class="battle-waiting-sub">Saving…</div>
     </div>`;
 
-  await fbSubmitBattleScore(battleId, score, sentence, role);
+  await fbSubmitBattleScore(battleId, score, sentence, role, feedback);
   const battle = await fbGetBattle(battleId);
   if (!battle) return;
 
   const theirScore    = role === 'creator' ? battle.opponentScore    : battle.creatorScore;
   const theirSentence = role === 'creator' ? battle.opponentSentence : battle.creatorSentence;
+  const theirFeedback = role === 'creator' ? (battle.opponentFeedback || []) : (battle.creatorFeedback || []);
 
   if (theirScore !== null && theirScore !== undefined) {
-    showBattleResults(score, sentence, theirScore, theirSentence, opponentName, word);
+    showBattleResults(score, sentence, theirScore, theirSentence, opponentName, word, feedback, theirFeedback);
   } else {
     document.getElementById('battleBody').innerHTML = `
       <div class="battle-waiting">
         <div class="battle-score-big">${score}<span>/100</span></div>
         <div class="battle-waiting-label">Your score</div>
         <div class="battle-waiting-sentence">"${sentence || '(no sentence)'}"</div>
+        <div class="battle-feedback-list">${feedbackHtml}</div>
         <div class="battle-waiting-sub">${opponentName} hasn't answered yet — check back later!</div>
         <button class="btn btn-ghost" id="battleDoneWaitBtn">Back to Home</button>
       </div>`;
@@ -2023,10 +2085,11 @@ async function submitBattleSentence(sentence) {
   }
 }
 
-function showBattleResults(myScore, mySentence, theirScore, theirSentence, opponentName, word) {
+function showBattleResults(myScore, mySentence, theirScore, theirSentence, opponentName, word, myFeedback = [], theirFeedback = []) {
   const won = myScore > theirScore;
   const tied = myScore === theirScore;
   const label = tied ? "It's a tie!" : won ? 'You won! ⚔' : `${opponentName} wins`;
+  const mkFb = fb => fb.length ? `<div class="battle-feedback-list">${fb.map(f => `<div class="battle-feedback-item">• ${f}</div>`).join('')}</div>` : '';
   document.getElementById('battleProgressFill').style.width = '100%';
   document.getElementById('battleCount').textContent = 'Done!';
   document.getElementById('battleBody').innerHTML = `
@@ -2038,12 +2101,14 @@ function showBattleResults(myScore, mySentence, theirScore, theirSentence, oppon
           <div class="battle-score-name">You</div>
           <div class="battle-score-num">${myScore}</div>
           <div class="battle-score-sentence">"${mySentence || '(no sentence)'}"</div>
+          ${mkFb(myFeedback)}
         </div>
         <div class="battle-score-divider">vs</div>
         <div class="battle-score-block ${!won && !tied ? 'battle-score-winner' : ''}">
           <div class="battle-score-name">${opponentName}</div>
           <div class="battle-score-num">${theirScore}</div>
           <div class="battle-score-sentence">"${theirSentence || '(no sentence)'}"</div>
+          ${mkFb(theirFeedback)}
         </div>
       </div>
       <button class="btn btn-primary" id="battleFinishBtn">Back to Home</button>
@@ -2059,6 +2124,7 @@ function showBattleResults(myScore, mySentence, theirScore, theirSentence, oppon
 /* ─── BATTLE HUB SCREEN ──────────────────────────────────────────────────────── */
 
 let _bhTab = 'friends';
+let _bhFriendsData = null; // separate cache from global leaderboard
 
 async function initBattleHub() {
   const body = document.getElementById('battlehubBody');
@@ -2070,18 +2136,21 @@ async function initBattleHub() {
     t.onclick = () => { _bhTab = t.dataset.bhtab; initBattleHub(); };
   });
 
+  if (_bhTab === 'tournament') {
+    await _renderTournamentTab();
+    return;
+  }
+
   if (_bhTab === 'friends') {
-    // Reuse friends leaderboard data
-    let data = _lbData;
-    if (!data) {
-      const [lb, pending] = await Promise.all([fbGetFriendsLeaderboard(), fbGetPendingBattles()]);
-      data = { ...lb, pendingBattles: pending, friendsStreak: lb.streak };
-      _lbData = data;
-    }
+    // Always fetch fresh friends data — never use global leaderboard cache
+    const [lb, pending] = await Promise.all([
+      typeof fbGetFriendsLeaderboard === 'function' ? fbGetFriendsLeaderboard() : Promise.resolve({ streak: [], stars: [] }),
+      typeof fbGetPendingBattles === 'function' ? fbGetPendingBattles() : Promise.resolve([])
+    ]);
+    _bhFriendsData = { ...lb, pendingBattles: pending };
 
     const myId = localStorage.getItem('pete_uid') || (typeof fbUser !== 'undefined' && fbUser ? fbUser.uid : null);
-    const pending = data.pendingBattles || [];
-    const entries = (data.friendsStreak || data.streak || []).filter(e => e.id !== myId);
+    const entries = (_bhFriendsData.streak || []).filter(e => e.id !== myId);
 
     let html = '';
 
@@ -2101,7 +2170,7 @@ async function initBattleHub() {
 
     entries.forEach(e => {
       const lastActiveMs = e.lastActive && e.lastActive.toMillis ? e.lastActive.toMillis() : 0;
-      const isOnline = Date.now() - lastActiveMs < 5 * 60 * 1000;
+      const isOnline = Date.now() - lastActiveMs < 10 * 60 * 1000;
       const wardrobe = e.equipped || {};
       const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 32) : '';
       const onlineDot = `<span class="online-dot ${isOnline ? 'online-dot-active' : ''}"></span>`;
@@ -2172,6 +2241,355 @@ async function initBattleHub() {
       row.addEventListener('click', () => showUserProfile(row.dataset.uid, 'battlehub'));
     });
   }
+}
+
+/* ─── TOURNAMENT SYSTEM ──────────────────────────────────────────────────────── */
+
+async function _renderTournamentTab() {
+  const body = document.getElementById('battlehubBody');
+  const myUid = typeof fbUser !== 'undefined' && fbUser ? fbUser.uid : null;
+  body.innerHTML = '<div class="battlehub-loading">Loading…</div>';
+
+  const tournaments = typeof fbGetMyTournaments === 'function' ? await fbGetMyTournaments() : [];
+
+  let html = `<div class="tourn-actions">
+    <button class="btn btn-primary tourn-create-btn">+ Create Tournament</button>
+    <button class="btn btn-ghost tourn-join-btn">Join with Code</button>
+  </div>`;
+
+  if (tournaments.length > 0) {
+    html += '<div class="tourn-list">';
+    tournaments.forEach(t => {
+      const isCreator = t.creatorId === myUid;
+      const statusLabel = t.status === 'lobby' ? '⏳ Lobby' : t.status === 'playing' ? '⚔ In Progress' : '✅ Complete';
+      const typeLabel = t.type === 'bracket' ? '🏆 Bracket' : '📊 Round Robin';
+      const prizeLabel = (t.prizePool || 0) > 0 ? `💰 ${t.prizePool} coins` : 'Free';
+      html += `<div class="tourn-row" data-tid="${t.id}">
+        <div class="tourn-row-header">
+          <span class="tourn-name">${t.name || 'Tournament'}</span>
+          <span class="tourn-status">${statusLabel}</span>
+        </div>
+        <div class="tourn-row-meta">${typeLabel} · ${(t.players || []).length}/${t.maxPlayers || 8} players · ${prizeLabel}</div>
+        ${isCreator && t.status === 'lobby' ? `<div class="tourn-code">Code: <strong>${t.code}</strong></div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="battlehub-empty">No tournaments yet — create one or join with a code!</div>';
+  }
+
+  body.innerHTML = html;
+  body.querySelector('.tourn-create-btn').addEventListener('click', () => _showCreateTournament());
+  body.querySelector('.tourn-join-btn').addEventListener('click', () => _showJoinTournament());
+  body.querySelectorAll('.tourn-row').forEach(row => {
+    row.addEventListener('click', async () => {
+      const t = tournaments.find(t => t.id === row.dataset.tid);
+      if (t) _showTournamentDetail(t);
+    });
+  });
+}
+
+function _showCreateTournament() {
+  const body = document.getElementById('battlehubBody');
+  body.innerHTML = `
+    <div class="tourn-form">
+      <h3>Create Tournament</h3>
+      <label>Name (optional)</label>
+      <input class="tourn-input" id="tournNameInput" placeholder="My Tournament" maxlength="40"/>
+      <label>Type</label>
+      <div class="tourn-type-row">
+        <button class="tourn-type-btn active" data-type="bracket">🏆 Bracket<br><small>8 players · elimination</small></button>
+        <button class="tourn-type-btn" data-type="rr">📊 Round Robin<br><small>Up to 16 · 5 rounds</small></button>
+      </div>
+      <label>Entry Fee</label>
+      <div class="tourn-fee-row">
+        <button class="tourn-fee-btn active" data-fee="0">Free</button>
+        <button class="tourn-fee-btn" data-fee="50">50 🪙</button>
+        <button class="tourn-fee-btn" data-fee="100">100 🪙</button>
+        <button class="tourn-fee-btn" data-fee="200">200 🪙</button>
+      </div>
+      <div class="tourn-prize-info" id="tournPrizeInfo">🏆 Winner takes the glory (free entry)</div>
+      <button class="btn btn-primary" id="tournCreateConfirmBtn" style="margin-top:16px">Create & Get Code</button>
+      <button class="btn btn-ghost" id="tournCreateCancelBtn">Cancel</button>
+    </div>`;
+
+  let selectedType = 'bracket', selectedFee = 0;
+  const updatePrize = () => {
+    const el = document.getElementById('tournPrizeInfo');
+    if (!el) return;
+    el.textContent = selectedFee === 0
+      ? '🏆 Winner takes the glory (free entry)'
+      : `💰 Prize pool · Winner: 65%, Runner-up: 25%, rest to host`;
+  };
+  body.querySelectorAll('.tourn-type-btn').forEach(btn => btn.addEventListener('click', () => {
+    body.querySelectorAll('.tourn-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); selectedType = btn.dataset.type;
+  }));
+  body.querySelectorAll('.tourn-fee-btn').forEach(btn => btn.addEventListener('click', () => {
+    body.querySelectorAll('.tourn-fee-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); selectedFee = parseInt(btn.dataset.fee, 10); updatePrize();
+  }));
+
+  document.getElementById('tournCreateConfirmBtn').addEventListener('click', async () => {
+    const name = (document.getElementById('tournNameInput') || {}).value || '';
+    const btn = document.getElementById('tournCreateConfirmBtn');
+    btn.disabled = true; btn.textContent = 'Creating…';
+    const result = await fbCreateTournament(selectedType, name, selectedFee);
+    if (result.ok) {
+      updateCoinDisplay();
+      body.innerHTML = `
+        <div class="tourn-created">
+          <div class="tourn-created-icon">🏆</div>
+          <div class="tourn-created-title">Tournament Created!</div>
+          <div class="tourn-created-sub">Share this code with your opponents</div>
+          <div class="tourn-created-code">${result.code}</div>
+          <button class="btn btn-primary" id="tournShareCodeBtn">Share Code</button>
+          <button class="btn btn-ghost" id="tournViewBtn">View Lobby</button>
+        </div>`;
+      document.getElementById('tournShareCodeBtn').addEventListener('click', () => {
+        const msg = `Join my Pete tournament! Code: ${result.code} 📚⚔`;
+        if (navigator.share) navigator.share({ text: msg }).catch(() => {});
+        else navigator.clipboard.writeText(msg).then(() => showToast('Code copied!')).catch(() => showToast(msg));
+      });
+      document.getElementById('tournViewBtn').addEventListener('click', async () => {
+        const t = await fbGetTournament(result.tournamentId);
+        if (t) _showTournamentDetail(t);
+      });
+    } else {
+      showToast(result.error || 'Could not create tournament');
+      btn.disabled = false; btn.textContent = 'Create & Get Code';
+    }
+  });
+  document.getElementById('tournCreateCancelBtn').addEventListener('click', () => { _bhTab = 'tournament'; initBattleHub(); });
+}
+
+function _showJoinTournament() {
+  const body = document.getElementById('battlehubBody');
+  body.innerHTML = `
+    <div class="tourn-form">
+      <h3>Join Tournament</h3>
+      <label>Tournament Code</label>
+      <input class="tourn-input" id="tournJoinInput" placeholder="ABC123" maxlength="6" autocorrect="off" autocapitalize="characters"/>
+      <div class="tourn-join-msg" id="tournJoinMsg"></div>
+      <button class="btn btn-primary" id="tournJoinConfirmBtn" style="margin-top:8px">Join</button>
+      <button class="btn btn-ghost" id="tournJoinCancelBtn">Cancel</button>
+    </div>`;
+
+  document.getElementById('tournJoinConfirmBtn').addEventListener('click', async () => {
+    const code = (document.getElementById('tournJoinInput') || {}).value || '';
+    const btn = document.getElementById('tournJoinConfirmBtn');
+    const msg = document.getElementById('tournJoinMsg');
+    btn.disabled = true; btn.textContent = 'Joining…';
+    const result = await fbJoinTournament(code);
+    if (result.ok) {
+      updateCoinDisplay();
+      const t = await fbGetTournament(result.tournamentId);
+      if (t) _showTournamentDetail(t);
+    } else {
+      msg.textContent = result.error || 'Could not join';
+      btn.disabled = false; btn.textContent = 'Join';
+    }
+  });
+  document.getElementById('tournJoinCancelBtn').addEventListener('click', () => { _bhTab = 'tournament'; initBattleHub(); });
+}
+
+async function _showTournamentDetail(t) {
+  // Refresh
+  if (typeof fbGetTournament === 'function') {
+    const fresh = await fbGetTournament(t.id);
+    if (fresh) t = fresh;
+  }
+  const body = document.getElementById('battlehubBody');
+  const myUid = typeof fbUser !== 'undefined' && fbUser ? fbUser.uid : null;
+  const isCreator = t.creatorId === myUid;
+  const myPlayer = (t.players || []).find(p => p.uid === myUid);
+
+  if (t.status === 'lobby') {
+    body.innerHTML = `
+      <div class="tourn-detail">
+        <div class="tourn-detail-back" id="tournDetailBack">← Tournaments</div>
+        <div class="tourn-detail-name">${t.name || 'Tournament'}</div>
+        <div class="tourn-detail-meta">${t.type === 'bracket' ? '🏆 Bracket (elimination)' : '📊 Round Robin'} · ${(t.entryFee||0) > 0 ? `${t.entryFee} 🪙 entry` : 'Free entry'}</div>
+        ${(t.prizePool||0) > 0 ? `<div class="tourn-prize-pool">💰 Prize pool: ${t.prizePool} coins</div>` : ''}
+        ${isCreator ? `<div class="tourn-detail-code">Share code: <strong>${t.code}</strong></div>` : ''}
+        <div class="tourn-detail-players-label">Players (${(t.players||[]).length}/${t.maxPlayers||8})</div>
+        <div class="tourn-players-list">
+          ${(t.players||[]).map(p => `<div class="tourn-player-row">${typeof miniPeteIcon === 'function' ? miniPeteIcon(p.equipped||{}, 28) : ''}<span>${p.displayName||'Anonymous'} ${p.uid===t.creatorId?'👑':''}</span></div>`).join('')}
+        </div>
+        ${isCreator
+          ? `<button class="btn btn-primary" id="tournStartBtn" style="margin-top:8px">Start Tournament</button>`
+          : '<div class="tourn-waiting-start">Waiting for the host to start…</div>'}
+        <button class="btn btn-ghost" id="tournDetailRefreshBtn">Refresh</button>
+      </div>`;
+    document.getElementById('tournDetailBack').addEventListener('click', () => { _bhTab = 'tournament'; initBattleHub(); });
+    document.getElementById('tournDetailRefreshBtn').addEventListener('click', async () => { const r = await fbGetTournament(t.id); if (r) _showTournamentDetail(r); });
+    if (isCreator) {
+      document.getElementById('tournStartBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('tournStartBtn');
+        btn.disabled = true; btn.textContent = 'Starting…';
+        const res = await fbStartTournament(t.id);
+        if (res.ok) { const r = await fbGetTournament(t.id); if (r) _showTournamentDetail(r); }
+        else { showToast(res.error || 'Could not start'); btn.disabled = false; btn.textContent = 'Start Tournament'; }
+      });
+    }
+
+  } else if (t.status === 'playing') {
+    const roundIdx = t.currentRound || 0;
+    const entries = typeof fbGetTournamentEntries === 'function' ? await fbGetTournamentEntries(t.id, roundIdx) : [];
+    const myEntry = entries.find(e => e.uid === myUid);
+    const wordObj = _getTournamentWord(t, roundIdx);
+
+    if (myEntry) {
+      const activePlayers = (t.players||[]).filter(p => !p.eliminated);
+      _showTournamentWaiting(t, roundIdx, myEntry, activePlayers.length, entries.length);
+    } else if (myPlayer && myPlayer.eliminated) {
+      _showTournamentEliminated(t, roundIdx, entries);
+    } else {
+      _showTournamentRound(t, roundIdx, wordObj);
+    }
+
+  } else if (t.status === 'done') {
+    _showTournamentFinal(t);
+  }
+}
+
+function _getTournamentWord(t, roundIdx) {
+  const seed = (t.id || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const wordList = typeof getShuffledWords === 'function' ? getShuffledWords() : [];
+  if (!wordList.length) return { word: 'eloquent', definition: 'Fluent or persuasive in speaking or writing.' };
+  const idx = (seed + roundIdx * 137) % wordList.length;
+  const w = wordList[idx] || wordList[0];
+  return { word: w.word || w, definition: w.definition || w.meaning || '' };
+}
+
+function _showTournamentRound(t, roundIdx, wordObj) {
+  const body = document.getElementById('battlehubBody');
+  const roundLbl = t.type === 'bracket'
+    ? (['Quarter-Final', 'Semi-Final', 'Final'][roundIdx] || `Round ${roundIdx + 1}`)
+    : `Round ${roundIdx + 1} of ${t.numRounds || 5}`;
+  body.innerHTML = `
+    <div class="tourn-detail">
+      <div class="tourn-round-label">${roundLbl}</div>
+      <div class="tourn-word">${wordObj.word}</div>
+      ${wordObj.definition ? `<div class="tourn-word-def">${wordObj.definition}</div>` : ''}
+      <textarea class="tourn-sentence-input" id="tournSentInput" placeholder="Write a sentence using '${wordObj.word}'…" maxlength="400"></textarea>
+      <div class="tourn-char-count" id="tournCharCount">0 words</div>
+      <button class="btn btn-primary" id="tournSubmitBtn">Submit Sentence</button>
+    </div>`;
+
+  const ta = document.getElementById('tournSentInput');
+  const cc = document.getElementById('tournCharCount');
+  ta.addEventListener('input', () => {
+    const wc = ta.value.trim().split(/\s+/).filter(Boolean).length;
+    cc.textContent = `${wc} word${wc !== 1 ? 's' : ''}`;
+  });
+
+  document.getElementById('tournSubmitBtn').addEventListener('click', async () => {
+    const sentence = ta.value.trim();
+    if (!sentence) { showToast('Write a sentence first!'); return; }
+    const btn = document.getElementById('tournSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Scoring…';
+    const { score, feedback } = scoreSentenceDetailed(sentence, wordObj.word);
+    const fbHtml = feedback.map(f => `<div class="battle-feedback-item">• ${f}</div>`).join('');
+    body.innerHTML = `
+      <div class="battle-waiting">
+        <div class="battle-score-big">${score}<span>/100</span></div>
+        <div class="battle-waiting-label">Your score</div>
+        <div class="battle-waiting-sentence">"${sentence}"</div>
+        <div class="battle-feedback-list">${fbHtml}</div>
+        <div class="battle-waiting-sub">Submitting…</div>
+      </div>`;
+    const result = await fbSubmitTournamentEntry(t.id, roundIdx, wordObj.word, sentence, score, feedback);
+    if (result.error) { showToast(result.error); _showTournamentRound(t, roundIdx, wordObj); return; }
+    if (result.allSubmitted) {
+      setTimeout(async () => { const r = await fbGetTournament(t.id); if (r) _showTournamentDetail(r); }, 2200);
+    } else {
+      const activePlayers = (t.players||[]).filter(p => !p.eliminated);
+      const entries = await fbGetTournamentEntries(t.id, roundIdx);
+      _showTournamentWaiting(t, roundIdx, { score, sentence, feedback }, activePlayers.length, entries.length);
+    }
+  });
+}
+
+function _showTournamentWaiting(t, roundIdx, myEntry, totalActive, submitted) {
+  const body = document.getElementById('battlehubBody');
+  const fbHtml = (myEntry.feedback||[]).map(f => `<div class="battle-feedback-item">• ${f}</div>`).join('');
+  body.innerHTML = `
+    <div class="battle-waiting">
+      <div class="battle-score-big">${myEntry.score}<span>/100</span></div>
+      <div class="battle-waiting-label">Your score</div>
+      <div class="battle-waiting-sentence">"${myEntry.sentence||''}"</div>
+      <div class="battle-feedback-list">${fbHtml}</div>
+      <div class="battle-waiting-sub">Waiting: ${submitted}/${totalActive} submitted</div>
+      <button class="btn btn-ghost" id="tournRefreshWaitBtn">Check for updates</button>
+      <button class="btn btn-ghost" id="tournWaitBackBtn">Back to Battle Hub</button>
+    </div>`;
+  document.getElementById('tournRefreshWaitBtn').addEventListener('click', async () => { const r = await fbGetTournament(t.id); if (r) _showTournamentDetail(r); });
+  document.getElementById('tournWaitBackBtn').addEventListener('click', () => { _bhTab = 'tournament'; initBattleHub(); });
+}
+
+function _showTournamentEliminated(t, roundIdx, entries) {
+  const body = document.getElementById('battlehubBody');
+  const sorted = [...entries].sort((a, b) => b.score - a.score);
+  body.innerHTML = `
+    <div class="tourn-detail">
+      <div class="tourn-round-label">You've been eliminated</div>
+      <div class="tourn-results-list">
+        ${sorted.map((e, i) => `<div class="tourn-result-row">
+          <span class="rank-badge ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
+          <span>${e.displayName||'Anonymous'}</span>
+          <span class="tourn-score-val">${e.score}</span>
+        </div>`).join('')}
+      </div>
+      <button class="btn btn-ghost" id="tournElimBackBtn">Back to Tournaments</button>
+    </div>`;
+  document.getElementById('tournElimBackBtn').addEventListener('click', () => { _bhTab = 'tournament'; initBattleHub(); });
+}
+
+async function _showTournamentFinal(t) {
+  const body = document.getElementById('battlehubBody');
+  const myUid = typeof fbUser !== 'undefined' && fbUser ? fbUser.uid : null;
+  const winners = t.winners || [];
+  const winnerPlayer = (t.players||[]).find(p => p.uid === winners[0]);
+  const runnerPlayer = (t.players||[]).find(p => p.uid === winners[1]);
+  const pool = t.prizePool || 0;
+  const winnerPrize = Math.floor(pool * 0.65);
+  const runnerUpPrize = Math.floor(pool * 0.25);
+
+  // One-time prize award
+  const prizeKey = `pete_tourn_prize_${t.id}`;
+  if (pool > 0 && !localStorage.getItem(prizeKey)) {
+    if (myUid === winners[0]) { earnCoins(winnerPrize); localStorage.setItem(prizeKey, '1'); showToast(`🏆 Champion! +${winnerPrize} coins!`); }
+    else if (myUid === winners[1]) { earnCoins(runnerUpPrize); localStorage.setItem(prizeKey, '1'); showToast(`🥈 Runner-up! +${runnerUpPrize} coins!`); }
+  }
+
+  const sorted = [...(t.players||[])].sort((a, b) => (b.totalScore||0)-(a.totalScore||0));
+  body.innerHTML = `
+    <div class="tourn-detail">
+      <div class="tourn-detail-back" id="tournFinalBack">← Tournaments</div>
+      <div class="tourn-final-title">🏆 ${t.name||'Tournament'}</div>
+      <div class="tourn-final-complete">Tournament Complete!</div>
+      ${winnerPlayer ? `<div class="tourn-winner-block">
+        <div class="tourn-winner-crown">👑</div>
+        <div class="tourn-winner-name">${winnerPlayer.displayName||'Anonymous'}</div>
+        <div class="tourn-winner-sub">Champion${pool>0?` · ${winnerPrize} coins`:''}</div>
+      </div>` : ''}
+      ${runnerPlayer ? `<div class="tourn-runnerup-block">
+        <div class="tourn-runnerup-name">🥈 ${runnerPlayer.displayName||'Anonymous'} — Runner-up${pool>0?` · ${runnerUpPrize} coins`:''}</div>
+      </div>` : ''}
+      <div class="tourn-final-standings">Final Standings</div>
+      <div class="tourn-results-list">
+        ${sorted.map((p,i) => `<div class="tourn-result-row">
+          <span class="rank-badge ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span>
+          <span>${typeof miniPeteIcon==='function'?miniPeteIcon(p.equipped||{},24):''}${p.displayName||'Anonymous'}</span>
+          <span class="tourn-score-val">${Math.round(p.totalScore||0)} pts</span>
+        </div>`).join('')}
+      </div>
+      <button class="btn btn-ghost" id="tournFinalBackBtn">Back to Battle Hub</button>
+    </div>`;
+  document.getElementById('tournFinalBack').addEventListener('click', () => { _bhTab = 'tournament'; initBattleHub(); });
+  document.getElementById('tournFinalBackBtn').addEventListener('click', () => { _bhTab = 'tournament'; initBattleHub(); });
+  updateCoinDisplay();
 }
 
 /* ─── PROFILE SCREEN ────────────────────────────────────────────────────────── */
@@ -2370,7 +2788,7 @@ function renderLeaderboardTab(tab) {
         const wardrobe = isMe ? getEquipped() : (e.equipped || {});
         const avatar = typeof miniPeteIcon === 'function' ? miniPeteIcon(wardrobe, 30) : '';
         const lastActiveMs = e.lastActive && e.lastActive.toMillis ? e.lastActive.toMillis() : 0;
-        const isOnline = isMe || (Date.now() - lastActiveMs < 5 * 60 * 1000);
+        const isOnline = isMe || (Date.now() - lastActiveMs < 10 * 60 * 1000);
         const onlineDot = `<span class="online-dot ${isOnline ? 'online-dot-active' : ''}"></span>`;
         const battleBtn = !isMe
           ? `<button class="leaderboard-entry-battle-btn" data-friend-id="${e.id}" data-friend-name="${e.displayName || 'Anonymous'}" data-is-online="${isOnline}">${isOnline ? 'Battle' : 'Offline'}</button>`
@@ -3078,6 +3496,11 @@ document.addEventListener('DOMContentLoaded', () => {
       fbUpdateLastActive();
       setInterval(() => { if (typeof fbUpdateLastActive === 'function') fbUpdateLastActive(); }, 2 * 60 * 1000);
     }
+  });
+
+  // Refresh lastActive immediately when app comes back to foreground
+  document.addEventListener('resume', () => {
+    if (typeof fbUpdateLastActive === 'function') fbUpdateLastActive();
   });
 
   // Check if app needs updating (non-blocking)

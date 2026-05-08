@@ -23,7 +23,7 @@ workflows:
       - name: Install npm dependencies
         script: |
           npm install
-          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/push-notifications @capacitor-firebase/messaging
       - name: Copy web files to www
         script: |
           mkdir -p www

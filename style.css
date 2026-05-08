@@ -3770,3 +3770,97 @@ body::before {
   color: var(--text-muted);
   margin-bottom: 4px;
 }
+
+/* ─── BATTLE FEEDBACK ───────────────────────────────────────────────────────── */
+.battle-feedback-list { margin: 8px 0 4px; text-align: left; }
+.battle-feedback-item {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+  padding: 5px 10px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  line-height: 1.4;
+}
+
+/* ─── TOURNAMENT ─────────────────────────────────────────────────────────────── */
+.tourn-actions { display: flex; gap: 10px; margin-bottom: 16px; }
+.tourn-create-btn, .tourn-join-btn { flex: 1; min-height: 44px; }
+.tourn-list { display: flex; flex-direction: column; gap: 10px; }
+.tourn-row { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; cursor: pointer; active-opacity: 0.8; }
+.tourn-row-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.tourn-name { font-weight: 700; font-size: 15px; }
+.tourn-status { font-size: 12px; opacity: 0.65; }
+.tourn-row-meta { font-size: 12px; opacity: 0.6; margin-bottom: 2px; }
+.tourn-code { font-size: 12px; color: var(--accent); font-weight: 600; margin-top: 4px; }
+
+.tourn-form h3 { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+.tourn-form label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; opacity: 0.55; margin: 14px 0 6px; }
+.tourn-input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--border); background: var(--card-bg); font-size: 16px; color: var(--text); outline: none; }
+.tourn-type-row { display: flex; gap: 8px; }
+.tourn-type-btn {
+  flex: 1; background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 10px 8px; font-size: 13px; font-weight: 600; cursor: pointer; line-height: 1.4;
+  color: var(--text); text-align: center; min-height: 58px;
+}
+.tourn-type-btn small { font-weight: 400; opacity: 0.65; display: block; font-size: 11px; }
+.tourn-type-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.tourn-fee-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.tourn-fee-btn {
+  background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text); min-height: 36px;
+}
+.tourn-fee-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.tourn-prize-info { font-size: 13px; margin: 10px 0; padding: 10px 12px; background: var(--card-bg); border-radius: 10px; }
+.tourn-join-msg { color: #c83020; font-size: 13px; min-height: 18px; margin: 8px 0; }
+
+.tourn-created { text-align: center; padding: 20px 0; }
+.tourn-created-icon { font-size: 48px; margin-bottom: 12px; }
+.tourn-created-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+.tourn-created-sub { font-size: 14px; opacity: 0.7; margin-bottom: 20px; }
+.tourn-created-code {
+  font-size: 38px; font-weight: 800; letter-spacing: 7px; color: var(--accent);
+  margin-bottom: 20px; font-family: 'Courier New', monospace;
+}
+
+.tourn-detail { padding: 2px 0; }
+.tourn-detail-back { font-size: 14px; color: var(--accent); cursor: pointer; margin-bottom: 14px; font-weight: 600; }
+.tourn-detail-name { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.tourn-detail-meta { font-size: 13px; opacity: 0.7; margin-bottom: 6px; }
+.tourn-detail-code { font-size: 14px; margin-bottom: 12px; }
+.tourn-prize-pool { font-size: 14px; font-weight: 700; color: #c89010; margin-bottom: 8px; }
+.tourn-detail-players-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; opacity: 0.55; margin: 12px 0 8px; }
+.tourn-players-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.tourn-player-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.tourn-waiting-start { font-size: 13px; opacity: 0.7; text-align: center; padding: 12px 0; }
+
+.tourn-round-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin-bottom: 8px; }
+.tourn-word { font-size: 34px; font-weight: 800; margin-bottom: 4px; }
+.tourn-word-def { font-size: 14px; opacity: 0.72; margin-bottom: 16px; font-style: italic; }
+.tourn-sentence-input {
+  width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid var(--border);
+  background: var(--card-bg); font-size: 16px; color: var(--text); min-height: 100px;
+  resize: none; margin-bottom: 6px; outline: none; font-family: var(--font-sans);
+}
+.tourn-char-count { font-size: 12px; opacity: 0.55; text-align: right; margin-bottom: 14px; }
+
+.tourn-results-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.tourn-result-row {
+  display: flex; align-items: center; gap: 10px; background: var(--card-bg);
+  border-radius: 10px; padding: 10px 12px;
+}
+.tourn-score-val { margin-left: auto; font-weight: 700; font-size: 15px; }
+
+.tourn-final-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.tourn-final-complete { font-size: 14px; opacity: 0.65; margin-bottom: 20px; }
+.tourn-winner-block {
+  background: linear-gradient(135deg, #f5d060, #e8a720);
+  border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(232,167,32,0.35);
+}
+.tourn-winner-crown { font-size: 30px; }
+.tourn-winner-name { font-size: 20px; font-weight: 800; color: #4a3000; }
+.tourn-winner-sub { font-size: 13px; color: #6a4a00; opacity: 0.9; }
+.tourn-runnerup-block { text-align: center; margin-bottom: 16px; }
+.tourn-runnerup-name { font-size: 15px; font-weight: 600; }
+.tourn-final-standings { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; opacity: 0.55; margin-bottom: 10px; }

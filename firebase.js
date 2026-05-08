@@ -216,14 +216,16 @@ async function fbGetPendingBattles() {
   } catch (e) { console.warn('Pete: fbGetPendingBattles', e); return []; }
 }
 
-async function fbSubmitBattleScore(battleId, score, sentence, role) {
+async function fbSubmitBattleScore(battleId, score, sentence, role, feedback = []) {
   if (!fbUser) return;
   const scoreField    = role === 'creator' ? 'creatorScore'    : 'opponentScore';
   const sentenceField = role === 'creator' ? 'creatorSentence' : 'opponentSentence';
+  const feedbackField = role === 'creator' ? 'creatorFeedback' : 'opponentFeedback';
   try {
     await db.collection('battles').doc(battleId).update({
       [scoreField]: score,
-      [sentenceField]: sentence
+      [sentenceField]: sentence,
+      [feedbackField]: feedback
     });
   } catch (e) { console.warn('Pete: fbSubmitBattleScore', e); }
 }
@@ -394,4 +396,185 @@ async function fbGetFriendsLeaderboard() {
     const byStars  = [...users].sort((a, b) => (b.totalStars || 0) - (a.totalStars || 0));
     return { streak: byStreak, stars: byStars };
   } catch (e) { console.warn('Pete: fbGetFriendsLeaderboard', e); return { streak: [], stars: [] }; }
+}
+
+/* ─── TOURNAMENT FUNCTIONS ───────────────────────────────────────────────────── */
+
+function _fbTournamentCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function fbCreateTournament(type, name, entryFee) {
+  if (!fbUser) return { error: 'Not signed in' };
+  const myName = localStorage.getItem('pete_nickname') || 'Anonymous';
+  const equipped = JSON.parse(localStorage.getItem('pete_equipped') || '{}');
+  const code = _fbTournamentCode();
+  const maxPlayers = type === 'bracket' ? 8 : 16;
+  const numRounds = type === 'bracket' ? 3 : 5;
+  const fee = Math.max(0, parseInt(entryFee, 10) || 0);
+  const coins = parseInt(localStorage.getItem('pete_coins') || '0', 10);
+  if (fee > 0 && coins < fee) return { error: `You need ${fee} coins to create this tournament` };
+  try {
+    const ref = await db.collection('tournaments').add({
+      code,
+      name: (name || `${myName}'s Tournament`).slice(0, 40),
+      type,
+      creatorId: fbUser.uid,
+      creatorName: myName,
+      status: 'lobby',
+      entryFee: fee,
+      prizePool: fee,
+      maxPlayers,
+      numRounds,
+      currentRound: 0,
+      playerIds: [fbUser.uid],
+      players: [{ uid: fbUser.uid, displayName: myName, equipped, totalScore: 0, eliminated: false }],
+      winners: [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if (fee > 0) localStorage.setItem('pete_coins', String(coins - fee));
+    return { ok: true, tournamentId: ref.id, code };
+  } catch (e) { console.warn('Pete: fbCreateTournament', e); return { error: 'Something went wrong' }; }
+}
+
+async function fbJoinTournament(code) {
+  if (!fbUser) return { error: 'Not signed in' };
+  const clean = (code || '').trim().toUpperCase();
+  if (clean.length !== 6) return { error: 'Codes are 6 characters' };
+  const myName = localStorage.getItem('pete_nickname') || 'Anonymous';
+  const equipped = JSON.parse(localStorage.getItem('pete_equipped') || '{}');
+  try {
+    const snap = await db.collection('tournaments')
+      .where('code', '==', clean).where('status', '==', 'lobby').limit(1).get();
+    if (snap.empty) return { error: 'Tournament not found or already started' };
+    const doc = snap.docs[0];
+    const t = doc.data();
+    if ((t.playerIds || []).includes(fbUser.uid)) return { error: "You're already in this tournament!" };
+    if ((t.players || []).length >= t.maxPlayers) return { error: 'Tournament is full!' };
+    const fee = t.entryFee || 0;
+    if (fee > 0) {
+      const coins = parseInt(localStorage.getItem('pete_coins') || '0', 10);
+      if (coins < fee) return { error: `You need ${fee} coins to enter!` };
+      localStorage.setItem('pete_coins', String(coins - fee));
+    }
+    await db.collection('tournaments').doc(doc.id).update({
+      playerIds: firebase.firestore.FieldValue.arrayUnion(fbUser.uid),
+      players: firebase.firestore.FieldValue.arrayUnion({ uid: fbUser.uid, displayName: myName, equipped, totalScore: 0, eliminated: false }),
+      prizePool: firebase.firestore.FieldValue.increment(fee)
+    });
+    return { ok: true, tournamentId: doc.id };
+  } catch (e) { console.warn('Pete: fbJoinTournament', e); return { error: 'Something went wrong' }; }
+}
+
+async function fbGetTournament(id) {
+  try {
+    const doc = await db.collection('tournaments').doc(id).get();
+    return doc.exists ? { id: doc.id, ...doc.data() } : null;
+  } catch (e) { console.warn('Pete: fbGetTournament', e); return null; }
+}
+
+async function fbStartTournament(id) {
+  if (!fbUser) return { error: 'Not signed in' };
+  try {
+    const doc = await db.collection('tournaments').doc(id).get();
+    if (!doc.exists) return { error: 'Tournament not found' };
+    const t = doc.data();
+    if (t.creatorId !== fbUser.uid) return { error: 'Only the creator can start' };
+    if (t.status !== 'lobby') return { error: 'Already started' };
+    const minPlayers = t.type === 'bracket' ? 4 : 2;
+    if ((t.players || []).length < minPlayers) return { error: `Need at least ${minPlayers} players to start` };
+    await db.collection('tournaments').doc(id).update({
+      status: 'playing',
+      startedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    return { ok: true };
+  } catch (e) { console.warn('Pete: fbStartTournament', e); return { error: 'Something went wrong' }; }
+}
+
+async function fbSubmitTournamentEntry(tournamentId, roundIdx, word, sentence, score, feedback) {
+  if (!fbUser) return { error: 'Not signed in' };
+  const myName = localStorage.getItem('pete_nickname') || 'Anonymous';
+  try {
+    await db.collection('tournaments').doc(tournamentId)
+      .collection('entries').doc(`r${roundIdx}_${fbUser.uid}`).set({
+        uid: fbUser.uid, displayName: myName, roundIdx, word, sentence, score, feedback,
+        submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    const tDoc = await db.collection('tournaments').doc(tournamentId).get();
+    if (!tDoc.exists) return { error: 'Tournament not found' };
+    const t = tDoc.data();
+    const activePlayers = (t.players || []).filter(p => !p.eliminated);
+    const entriesSnap = await db.collection('tournaments').doc(tournamentId)
+      .collection('entries').where('roundIdx', '==', roundIdx).get();
+    const submittedUids = new Set(entriesSnap.docs.map(d => d.data().uid));
+    const allSubmitted = activePlayers.every(p => submittedUids.has(p.uid));
+
+    if (allSubmitted) {
+      const entries = entriesSnap.docs.map(d => d.data());
+      let updates = {};
+      if (t.type === 'bracket') {
+        const updatedPlayers = (t.players || []).map(p => ({ ...p }));
+        const active = updatedPlayers.filter(p => !p.eliminated);
+        for (let i = 0; i < active.length - 1; i += 2) {
+          const p1 = active[i], p2 = active[i + 1];
+          const s1 = (entries.find(e => e.uid === p1.uid) || {}).score || 0;
+          const s2 = (entries.find(e => e.uid === p2.uid) || {}).score || 0;
+          const loser = s1 >= s2 ? p2 : p1;
+          const li = updatedPlayers.findIndex(p => p.uid === loser.uid);
+          if (li >= 0) updatedPlayers[li].eliminated = true;
+        }
+        const remaining = updatedPlayers.filter(p => !p.eliminated);
+        if (remaining.length <= 1) {
+          const byScore = [...updatedPlayers].sort((a, b) => (b.totalScore||0) - (a.totalScore||0));
+          updates = { status: 'done', players: updatedPlayers, currentRound: roundIdx + 1,
+            winners: byScore.slice(0, 2).map(p => p.uid),
+            completedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        } else {
+          updates = { currentRound: roundIdx + 1, players: updatedPlayers };
+        }
+      } else {
+        // Round robin — accumulate scores
+        const updatedPlayers = (t.players || []).map(p => {
+          const e = entries.find(e => e.uid === p.uid);
+          return { ...p, totalScore: (p.totalScore || 0) + (e ? e.score : 0) };
+        });
+        if (roundIdx + 1 >= (t.numRounds || 5)) {
+          const sorted = [...updatedPlayers].sort((a, b) => (b.totalScore||0) - (a.totalScore||0));
+          updates = { status: 'done', players: updatedPlayers, currentRound: roundIdx + 1,
+            winners: sorted.slice(0, 2).map(p => p.uid),
+            completedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        } else {
+          updates = { currentRound: roundIdx + 1, players: updatedPlayers };
+        }
+      }
+      await db.collection('tournaments').doc(tournamentId).update(updates);
+    }
+    return { ok: true, allSubmitted };
+  } catch (e) { console.warn('Pete: fbSubmitTournamentEntry', e); return { error: 'Something went wrong' }; }
+}
+
+async function fbGetTournamentEntries(tournamentId, roundIdx) {
+  try {
+    const snap = await db.collection('tournaments').doc(tournamentId)
+      .collection('entries').where('roundIdx', '==', roundIdx).get();
+    return snap.docs.map(d => d.data());
+  } catch (e) { console.warn('Pete: fbGetTournamentEntries', e); return []; }
+}
+
+async function fbGetMyTournaments() {
+  if (!fbUser) return [];
+  try {
+    const snap = await db.collection('tournaments')
+      .where('playerIds', 'array-contains', fbUser.uid).limit(20).get();
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return results.sort((a, b) => {
+      const at = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
+      const bt = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
+      return bt - at;
+    });
+  } catch (e) { console.warn('Pete: fbGetMyTournaments', e); return []; }
 }
