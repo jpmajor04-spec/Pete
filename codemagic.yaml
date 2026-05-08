@@ -8,11 +8,10 @@ workflows:
       groups:
         - ios-credentials
       vars:
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.jesse.peteapp"
       xcode: 16.3
-      cocoapods: default
     triggering:
       events:
         - push
@@ -31,9 +30,6 @@ workflows:
       - name: Sync Capacitor iOS
         script: |
           npx cap sync ios
-      - name: Install CocoaPods
-        script: |
-          cd ios/App && pod install
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
@@ -55,7 +51,7 @@ workflows:
       - name: Build iOS
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
