@@ -2304,10 +2304,10 @@ function _showCreateTournament() {
       <label>Entry Fee</label>
       <div class="tourn-fee-row">
         <button class="tourn-fee-btn active" data-fee="0">Free</button>
-        <button class="tourn-fee-btn" data-fee="15">15 🪙</button>
-        <button class="tourn-fee-btn" data-fee="50">50 🪙</button>
-        <button class="tourn-fee-btn" data-fee="100">100 🪙</button>
-        <button class="tourn-fee-btn" data-fee="200">200 🪙</button>
+        <button class="tourn-fee-btn" data-fee="15">15 coins</button>
+        <button class="tourn-fee-btn" data-fee="50">50 coins</button>
+        <button class="tourn-fee-btn" data-fee="100">100 coins</button>
+        <button class="tourn-fee-btn" data-fee="200">200 coins</button>
       </div>
       <div class="tourn-prize-info" id="tournPrizeInfo">🏆 Winner takes the glory (free entry)</div>
       <button class="btn btn-primary" id="tournCreateConfirmBtn" style="margin-top:16px">Create & Get Code</button>
@@ -2410,7 +2410,7 @@ async function _showTournamentDetail(t) {
       <div class="tourn-detail">
         <div class="tourn-detail-back" id="tournDetailBack">← Tournaments</div>
         <div class="tourn-detail-name">${t.name || 'Tournament'}</div>
-        <div class="tourn-detail-meta">${t.type === 'bracket' ? '🏆 Bracket (elimination)' : '📊 Round Robin'} · ${(t.entryFee||0) > 0 ? `${t.entryFee} 🪙 entry` : 'Free entry'}</div>
+        <div class="tourn-detail-meta">${t.type === 'bracket' ? '🏆 Bracket (elimination)' : '📊 Round Robin'} · ${(t.entryFee||0) > 0 ? `${t.entryFee} coins entry` : 'Free entry'}</div>
         ${(t.prizePool||0) > 0 ? `<div class="tourn-prize-pool">💰 Prize pool: ${t.prizePool} coins</div>` : ''}
         ${isCreator ? `<div class="tourn-detail-code">Share code: <strong>${t.code}</strong></div>` : ''}
         <div class="tourn-detail-players-label">Players (${(t.players||[]).length}/${t.maxPlayers||8})</div>
