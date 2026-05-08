@@ -2304,6 +2304,7 @@ function _showCreateTournament() {
       <label>Entry Fee</label>
       <div class="tourn-fee-row">
         <button class="tourn-fee-btn active" data-fee="0">Free</button>
+        <button class="tourn-fee-btn" data-fee="15">15 🪙</button>
         <button class="tourn-fee-btn" data-fee="50">50 🪙</button>
         <button class="tourn-fee-btn" data-fee="100">100 🪙</button>
         <button class="tourn-fee-btn" data-fee="200">200 🪙</button>
