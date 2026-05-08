@@ -11,7 +11,7 @@ workflows:
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.jesse.peteapp"
-      xcode: 16.3
+      xcode: 16.4
     triggering:
       events:
         - push
@@ -45,7 +45,7 @@ workflows:
       - name: Set build number
         script: |
           cd ios/App
-          agvtool new-marketing-version 1.4
+          agvtool new-marketing-version 1.5
           agvtool new-version -all $BUILD_NUMBER
           echo "Build number set to $BUILD_NUMBER"
       - name: Build iOS
