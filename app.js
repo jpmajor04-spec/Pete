@@ -796,7 +796,53 @@ const EVAL_LEVELS = [
   ]},
 ];
 
+function detectAI(sentence) {
+  const lower = sentence.toLowerCase();
+  // Phrases that are overwhelmingly associated with AI-generated text
+  const aiPhrases = [
+    'delve into', 'delves into', 'delved into',
+    'tapestry of', 'rich tapestry',
+    'testament to', 'stands as a testament', 'serves as a testament',
+    'it is worth noting', 'it is important to note', 'it is imperative',
+    'in today\'s world', 'in today\'s society', 'in today\'s fast',
+    'navigate the complexities', 'navigate the challenges',
+    'shed light on', 'sheds light on',
+    'embark on a journey', 'embark on this',
+    'in the realm of',
+    'serves as a reminder',
+    'in conclusion,', 'to summarize,', 'in summary,',
+    'one must acknowledge', 'one cannot help',
+    'in the grand tapestry',
+    'multifaceted nature', 'elucidate the',
+    'paramount importance', 'of paramount',
+    'myriad of ways', 'a myriad of',
+    'at its core,', 'at its heart,',
+    'underscore the importance', 'underscores the importance',
+    'fosters a sense of', 'foster a sense of',
+    'the human experience',
+    'in an ever-changing', 'in an increasingly',
+    'cannot be overstated',
+    'intricate tapestry', 'complex tapestry',
+    'not only does', 'not only do',
+  ];
+  let hits = 0;
+  for (const phrase of aiPhrases) {
+    if (lower.includes(phrase)) hits++;
+  }
+  if (hits >= 1) return true;
+  // 3+ of our rare connectives in one sentence is a strong AI signal
+  const rareConnectives = ['although','despite','whereas','however','nevertheless',
+    'notwithstanding','consequently','furthermore','moreover','insofar',
+    'inasmuch','hitherto','thereupon'];
+  const connCount = rareConnectives.filter(c => new RegExp('\\b' + c + '\\b', 'i').test(sentence)).length;
+  if (connCount >= 3) return true;
+  return false;
+}
+
 function evaluateSentence(sentence, word) {
+  if (detectAI(sentence)) {
+    return { score: 0, label: 'AI Detected', comment: 'Pete squints. This sentence was written by a robot, not you. Zero stars.', coinBonus: 0 };
+  }
   const words = sentence.trim().split(/\s+/).filter(Boolean);
   const len = words.length;
 
@@ -826,6 +872,7 @@ function evaluateSentence(sentence, word) {
 /* ─── 100-POINT BATTLE / TOURNAMENT SCORING ──────────────────────────────────── */
 function scoreSentenceDetailed(sentence, word) {
   if (!sentence || !sentence.trim()) return { score: 0, feedback: ['No sentence written.'] };
+  if (detectAI(sentence)) return { score: 0, feedback: ['AI-generated sentence detected. Write it yourself for a real score.'] };
   const lower = sentence.toLowerCase();
   if (!lower.includes((word || '').toLowerCase())) {
     return { score: 0, feedback: [`The word "${word}" must appear in your sentence.`] };
@@ -1304,8 +1351,11 @@ function onSentenceInput() {
   const feedbackEl = document.getElementById('sentenceFeedback');
 
   const val = inputEl.value;
-  counterEl.textContent = val.length + ' characters';
-  submitBtn.disabled = val.trim().length < 5;
+  const wordCount = val.trim() ? val.trim().split(/\s+/).length : 0;
+  const overLimit = wordCount > 150;
+  counterEl.textContent = `${wordCount} / 150 words${overLimit ? ' — too long!' : ''}`;
+  counterEl.style.color = overLimit ? '#c0392b' : '';
+  submitBtn.disabled = val.trim().length < 5 || overLimit;
 
   // Live check if word is in sentence
   const hasWord = val.toLowerCase().includes(state.word.word.toLowerCase());
@@ -1336,6 +1386,11 @@ function submitSentence() {
 
   if (val.length < 5) {
     feedbackEl.textContent = 'Write a full sentence!';
+    feedbackEl.className = 'sentence-feedback error';
+    return;
+  }
+  if (val.split(/\s+/).filter(Boolean).length > 150) {
+    feedbackEl.textContent = 'Keep it under 150 words.';
     feedbackEl.className = 'sentence-feedback error';
     return;
   }
@@ -2007,7 +2062,7 @@ function renderBattleChallenge() {
       <textarea class="battle-sentence-input" id="battleSentenceInput"
         placeholder="Use '${word}' in your sentence…"
         rows="3" spellcheck="true" autocorrect="on"></textarea>
-      <div class="battle-char-count" id="battleCharCount">0 / 10 words minimum</div>
+      <div class="battle-char-count" id="battleCharCount">0 / 150 words</div>
       <button class="btn btn-primary battle-submit-btn" id="battleSubmitBtn" disabled>Submit</button>
     </div>`;
 
@@ -2016,9 +2071,11 @@ function renderBattleChallenge() {
   const charCount = document.getElementById('battleCharCount');
 
   input.addEventListener('input', () => {
-    const words = input.value.trim().split(/\s+/).filter(Boolean).length;
-    charCount.textContent = `${words} word${words !== 1 ? 's' : ''}`;
-    submitBtn.disabled = input.value.trim().length < 5;
+    const words = input.value.trim() ? input.value.trim().split(/\s+/).filter(Boolean).length : 0;
+    const over = words > 150;
+    charCount.textContent = `${words} / 150 words${over ? ' — too long!' : ''}`;
+    charCount.style.color = over ? '#c0392b' : '';
+    submitBtn.disabled = input.value.trim().length < 5 || over;
   });
   submitBtn.addEventListener('click', () => submitBattleSentence(input.value.trim()));
 
@@ -2473,21 +2530,24 @@ function _showTournamentRound(t, roundIdx, wordObj) {
       <div class="tourn-round-label">${roundLbl}</div>
       <div class="tourn-word">${wordObj.word}</div>
       ${wordObj.definition ? `<div class="tourn-word-def">${wordObj.definition}</div>` : ''}
-      <textarea class="tourn-sentence-input" id="tournSentInput" placeholder="Write a sentence using '${wordObj.word}'…" maxlength="400"></textarea>
-      <div class="tourn-char-count" id="tournCharCount">0 words</div>
+      <textarea class="tourn-sentence-input" id="tournSentInput" placeholder="Write a sentence using '${wordObj.word}'…"></textarea>
+      <div class="tourn-char-count" id="tournCharCount">0 / 150 words</div>
       <button class="btn btn-primary" id="tournSubmitBtn">Submit Sentence</button>
     </div>`;
 
   const ta = document.getElementById('tournSentInput');
   const cc = document.getElementById('tournCharCount');
   ta.addEventListener('input', () => {
-    const wc = ta.value.trim().split(/\s+/).filter(Boolean).length;
-    cc.textContent = `${wc} word${wc !== 1 ? 's' : ''}`;
+    const wc = ta.value.trim() ? ta.value.trim().split(/\s+/).filter(Boolean).length : 0;
+    const over = wc > 150;
+    cc.textContent = `${wc} / 150 words${over ? ' — too long!' : ''}`;
+    cc.style.color = over ? '#c0392b' : '';
   });
 
   document.getElementById('tournSubmitBtn').addEventListener('click', async () => {
     const sentence = ta.value.trim();
     if (!sentence) { showToast('Write a sentence first!'); return; }
+    if (sentence.split(/\s+/).filter(Boolean).length > 150) { showToast('Keep it under 150 words.'); return; }
     const btn = document.getElementById('tournSubmitBtn');
     btn.disabled = true; btn.textContent = 'Scoring…';
     const { score, feedback } = scoreSentenceDetailed(sentence, wordObj.word);
