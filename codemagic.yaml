@@ -45,7 +45,7 @@ workflows:
       - name: Set build number
         script: |
           cd ios/App
-          agvtool new-marketing-version 1.5
+          agvtool new-marketing-version 1.6
           agvtool new-version -all $BUILD_NUMBER
           echo "Build number set to $BUILD_NUMBER"
       - name: Build iOS
