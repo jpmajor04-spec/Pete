@@ -118,6 +118,16 @@ async function fbUpdateLastActive() {
   } catch (e) {} // silent — presence heartbeat
 }
 
+async function fbUpdateStreak(count, dateKey) {
+  if (!fbUser) return;
+  try {
+    await db.collection('users').doc(fbUser.uid).update({
+      streak: count,
+      streakDate: dateKey
+    });
+  } catch (e) { console.warn('Pete: fbUpdateStreak', e); }
+}
+
 async function fbGetBattleLeaderboard() {
   try {
     const snap = await db.collection('users')
@@ -256,15 +266,36 @@ async function fbSubmitSentenceStars(word, sentence, stars) {
           word,
           sentence,
           weekKey,
+          likes: [],
           date: firebase.firestore.FieldValue.serverTimestamp()
         });
       }
     }
-    // Always increment totalStars by the star rating earned
-    await db.collection('users').doc(fbUser.uid).update({
-      totalStars: firebase.firestore.FieldValue.increment(stars)
-    });
+    // Only increment totalStars by improvement over personal best for this word
+    const userSnap = await db.collection('users').doc(fbUser.uid).get();
+    const wordBestStars = (userSnap.data() && userSnap.data().wordBestStars) || {};
+    const currentBest = wordBestStars[word] || 0;
+    const improvement = Math.max(0, stars - currentBest);
+    const updates = {};
+    if (improvement > 0) {
+      updates.totalStars = firebase.firestore.FieldValue.increment(improvement);
+      updates[`wordBestStars.${word}`] = stars;
+    }
+    if (Object.keys(updates).length > 0) {
+      await db.collection('users').doc(fbUser.uid).update(updates);
+    }
   } catch (e) { console.warn('Pete: fbSubmitSentenceStars', e); }
+}
+
+async function fbLikeSentence(docId, liked) {
+  if (!fbUser) return { error: 'Not signed in' };
+  try {
+    const op = liked
+      ? firebase.firestore.FieldValue.arrayUnion(fbUser.uid)
+      : firebase.firestore.FieldValue.arrayRemove(fbUser.uid);
+    await db.collection('five_stars').doc(docId).update({ likes: op });
+    return { ok: true };
+  } catch (e) { console.warn('Pete: fbLikeSentence', e); return { error: 'Something went wrong' }; }
 }
 
 // Keep old name as alias for backward compat
@@ -287,14 +318,27 @@ async function fbGetWotw() {
   } catch (e) { console.warn('Pete: fbGetWotw', e); return null; }
 }
 
+function _activeStreakDates() {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const fmt = d => `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  return new Set([fmt(today), fmt(yesterday)]);
+}
+
 async function fbGetLeaderboard() {
   try {
+    const activeDates = _activeStreakDates();
     const [s1, s2] = await Promise.all([
-      db.collection('users').orderBy('streak', 'desc').limit(10).get(),
+      db.collection('users').orderBy('streak', 'desc').limit(50).get(),
       db.collection('users').orderBy('totalStars', 'desc').limit(10).get()
     ]);
+    const activeStreaks = s1.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(u => (u.streak || 0) > 0 && activeDates.has(u.streakDate || ''))
+      .slice(0, 10);
     return {
-      streak: s1.docs.map(d => ({ id: d.id, ...d.data() })),
+      streak: activeStreaks,
       stars:  s2.docs.map(d => ({ id: d.id, ...d.data() }))
     };
   } catch (e) { console.warn('Pete: fbGetLeaderboard', e); return { streak: [], stars: [] }; }
@@ -392,7 +436,10 @@ async function fbGetFriendsLeaderboard() {
       .where(firebase.firestore.FieldPath.documentId(), 'in', allIds.slice(0, 30))
       .get();
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const byStreak = [...users].sort((a, b) => (b.streak || 0) - (a.streak || 0));
+    const activeDates = _activeStreakDates();
+    const byStreak = [...users]
+      .filter(u => (u.streak || 0) > 0 && activeDates.has(u.streakDate || ''))
+      .sort((a, b) => (b.streak || 0) - (a.streak || 0));
     const byStars  = [...users].sort((a, b) => (b.totalStars || 0) - (a.totalStars || 0));
     return { streak: byStreak, stars: byStars };
   } catch (e) { console.warn('Pete: fbGetFriendsLeaderboard', e); return { streak: [], stars: [] }; }
@@ -415,7 +462,7 @@ async function fbCreateTournament(type, name, entryFee) {
   const maxPlayers = type === 'bracket' ? 8 : 16;
   const numRounds = type === 'bracket' ? 3 : 5;
   const fee = Math.max(0, parseInt(entryFee, 10) || 0);
-  const coins = parseInt(localStorage.getItem('pete_coins') || '0', 10);
+  const coins = parseInt(localStorage.getItem('pete_coins_earned') || '0', 10) - parseInt(localStorage.getItem('pete_coins_spent') || '0', 10);
   if (fee > 0 && coins < fee) return { error: `You need ${fee} coins to create this tournament` };
   try {
     const ref = await db.collection('tournaments').add({
@@ -435,7 +482,10 @@ async function fbCreateTournament(type, name, entryFee) {
       winners: [],
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    if (fee > 0) localStorage.setItem('pete_coins', String(coins - fee));
+    if (fee > 0) {
+      const spent = parseInt(localStorage.getItem('pete_coins_spent') || '0', 10);
+      localStorage.setItem('pete_coins_spent', String(spent + fee));
+    }
     return { ok: true, tournamentId: ref.id, code };
   } catch (e) { console.warn('Pete: fbCreateTournament', e); return { error: 'Something went wrong' }; }
 }
@@ -456,9 +506,10 @@ async function fbJoinTournament(code) {
     if ((t.players || []).length >= t.maxPlayers) return { error: 'Tournament is full!' };
     const fee = t.entryFee || 0;
     if (fee > 0) {
-      const coins = parseInt(localStorage.getItem('pete_coins') || '0', 10);
+      const coins = parseInt(localStorage.getItem('pete_coins_earned') || '0', 10) - parseInt(localStorage.getItem('pete_coins_spent') || '0', 10);
       if (coins < fee) return { error: `You need ${fee} coins to enter!` };
-      localStorage.setItem('pete_coins', String(coins - fee));
+      const spent = parseInt(localStorage.getItem('pete_coins_spent') || '0', 10);
+      localStorage.setItem('pete_coins_spent', String(spent + fee));
     }
     await db.collection('tournaments').doc(doc.id).update({
       playerIds: firebase.firestore.FieldValue.arrayUnion(fbUser.uid),

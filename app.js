@@ -188,6 +188,9 @@ function updateStreak() {
   streak.lastDate = todayKey;
   localStorage.setItem('pete_streak', JSON.stringify(streak));
 
+  // Sync streak to Firestore so leaderboard reflects active status
+  if (typeof fbUpdateStreak === 'function') fbUpdateStreak(streak.count, todayKey);
+
   // Check milestone rewards
   const claimed = getClaimedMilestones();
   STREAK_MILESTONES.forEach(m => {
@@ -316,14 +319,18 @@ async function initWotw() {
     return;
   }
 
+  const myUid = typeof fbUser !== 'undefined' && fbUser && fbUser.uid;
   listEl.innerHTML = entries.map((e, i) => {
     const dateStr = e.date?.toDate
       ? e.date.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       : (e.date || '');
     const wordData = typeof WORDS !== 'undefined' ? WORDS.find(w => w.word.toLowerCase() === (e.word || '').toLowerCase()) : null;
     const defLine = wordData ? `<div class="wotw-entry-def">${wordData.definition}</div>` : '';
+    const likes = e.likes || [];
+    const liked = myUid && likes.includes(myUid);
+    const likeCount = likes.length;
     return `
-    <div class="wotw-entry ${i === 0 ? 'wotw-entry-top' : ''}">
+    <div class="wotw-entry ${i === 0 ? 'wotw-entry-top' : ''}" data-docid="${e.id || ''}">
       <div class="wotw-entry-header">
         <span class="wotw-entry-word">${e.word}</span>
         <span class="wotw-entry-stars">★★★★★</span>
@@ -331,8 +338,31 @@ async function initWotw() {
       </div>
       ${defLine}
       <div class="wotw-entry-sentence">"${e.sentence}"</div>
+      <div class="wotw-entry-footer">
+        <button class="wotw-like-btn ${liked ? 'wotw-liked' : ''}" data-docid="${e.id || ''}" data-liked="${liked ? '1' : '0'}">
+          ♥ ${likeCount > 0 ? likeCount : ''}
+        </button>
+      </div>
     </div>`;
   }).join('');
+
+  // Like button handler
+  listEl.querySelectorAll('.wotw-like-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (typeof fbLikeSentence !== 'function') return;
+      const docId = btn.dataset.docid;
+      if (!docId) return;
+      const wasLiked = btn.dataset.liked === '1';
+      const nowLiked = !wasLiked;
+      btn.dataset.liked = nowLiked ? '1' : '0';
+      btn.classList.toggle('wotw-liked', nowLiked);
+      const countText = btn.textContent.trim().replace('♥', '').trim();
+      let count = parseInt(countText) || 0;
+      count = nowLiked ? count + 1 : Math.max(0, count - 1);
+      btn.textContent = `♥ ${count > 0 ? count : ''}`;
+      await fbLikeSentence(docId, nowLiked);
+    });
+  });
 }
 
 /* ─── WARDROBE STORAGE ───────────────────────────────────────────────────────── */
