@@ -335,7 +335,7 @@ async function fbGetLeaderboard() {
     ]);
     const activeStreaks = s1.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(u => (u.streak || 0) > 0 && activeDates.has(u.streakDate || ''))
+      .filter(u => (u.streak || 0) > 0 && (!u.streakDate || activeDates.has(u.streakDate)))
       .slice(0, 10);
     return {
       streak: activeStreaks,
@@ -438,7 +438,7 @@ async function fbGetFriendsLeaderboard() {
     const users = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const activeDates = _activeStreakDates();
     const byStreak = [...users]
-      .filter(u => (u.streak || 0) > 0 && activeDates.has(u.streakDate || ''))
+      .filter(u => (u.streak || 0) > 0 && (!u.streakDate || activeDates.has(u.streakDate)))
       .sort((a, b) => (b.streak || 0) - (a.streak || 0));
     const byStars  = [...users].sort((a, b) => (b.totalStars || 0) - (a.totalStars || 0));
     return { streak: byStreak, stars: byStars };
