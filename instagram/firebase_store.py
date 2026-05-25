@@ -1,8 +1,9 @@
 import base64
 import json
 import os
+import requests
 import firebase_admin
-from firebase_admin import credentials, firestore, storage
+from firebase_admin import credentials, firestore
 
 _DOC_PATH = ("config", "instagram_poster")
 
@@ -12,9 +13,7 @@ def _init():
         raw = base64.b64decode(os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"]).decode()
         sa = json.loads(raw)
         cred = credentials.Certificate(sa)
-        firebase_admin.initialize_app(cred, {
-            "storageBucket": os.environ["FIREBASE_STORAGE_BUCKET"]
-        })
+        firebase_admin.initialize_app(cred)
 
 
 def get_vocab_index() -> int:
@@ -34,10 +33,12 @@ def set_vocab_index(index: int):
 
 
 def upload_image(local_path: str, filename: str) -> str:
-    """Uploads image to Firebase Storage and returns a public URL."""
-    _init()
-    bucket = storage.bucket()
-    blob = bucket.blob(f"instagram/{filename}")
-    blob.upload_from_filename(local_path, content_type="image/png")
-    blob.make_public()
-    return blob.public_url
+    """Uploads image to transfer.sh and returns a public URL."""
+    with open(local_path, 'rb') as f:
+        response = requests.put(
+            f"https://transfer.sh/{filename}",
+            data=f,
+            headers={"Max-Days": "3"},
+        )
+    response.raise_for_status()
+    return response.text.strip()
