@@ -6,6 +6,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 _DOC_PATH = ("config", "instagram_poster")
+_BUCKET = "pete-s-word-wardrobe.firebasestorage.app"
 
 
 def _init():
@@ -33,12 +34,32 @@ def set_vocab_index(index: int):
 
 
 def upload_image(local_path: str, filename: str) -> str:
-    """Uploads image to transfer.sh and returns a public URL."""
-    with open(local_path, 'rb') as f:
-        response = requests.put(
-            f"https://transfer.sh/{filename}",
-            data=f,
-            headers={"Max-Days": "3"},
+    """Uploads to Firebase Storage REST API and returns a public download URL."""
+    import google.auth.transport.requests
+    from google.oauth2 import service_account as sa_module
+
+    raw = base64.b64decode(os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"]).decode()
+    sa_info = json.loads(raw)
+
+    creds = sa_module.Credentials.from_service_account_info(
+        sa_info,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
+    creds.refresh(google.auth.transport.requests.Request())
+
+    object_path = f"instagram/{filename}"
+    encoded_path = object_path.replace("/", "%2F")
+
+    with open(local_path, "rb") as f:
+        resp = requests.post(
+            f"https://firebasestorage.googleapis.com/v0/b/{_BUCKET}/o",
+            params={"name": object_path},
+            headers={
+                "Authorization": f"Bearer {creds.token}",
+                "Content-Type": "image/png",
+            },
+            data=f.read(),
         )
-    response.raise_for_status()
-    return response.text.strip()
+    resp.raise_for_status()
+    token = resp.json()["downloadTokens"]
+    return f"https://firebasestorage.googleapis.com/v0/b/{_BUCKET}/o/{encoded_path}?alt=media&token={token}"
