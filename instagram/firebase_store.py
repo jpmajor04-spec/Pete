@@ -8,7 +8,8 @@ _DOC_PATH = ("config", "instagram_poster")
 
 def _init():
     if not firebase_admin._apps:
-        sa = json.loads(os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"])
+        raw = os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"].replace('\n', '\\n')
+        sa = json.loads(raw)
         cred = credentials.Certificate(sa)
         firebase_admin.initialize_app(cred, {
             "storageBucket": os.environ["FIREBASE_STORAGE_BUCKET"]
