@@ -14,11 +14,15 @@ def post_image(image_url: str, caption: str) -> str:
     uid = _clean(os.environ["IG_USER_ID"])
     token = _clean(os.environ["IG_ACCESS_TOKEN"])
 
+    print(f"[api] uid_len={len(uid)} token_len={len(token)} token_prefix={token[:6]} image_url={image_url}")
+
     r = requests.post(f"{_BASE}/{uid}/media", params={
         "image_url": image_url,
         "caption": caption,
         "access_token": token,
     })
+    if not r.ok:
+        print(f"[api] /media failed status={r.status_code} body={r.text}")
     r.raise_for_status()
     creation_id = r.json()["id"]
 
@@ -26,6 +30,8 @@ def post_image(image_url: str, caption: str) -> str:
         "creation_id": creation_id,
         "access_token": token,
     })
+    if not r.ok:
+        print(f"[api] /media_publish failed status={r.status_code} body={r.text}")
     r.raise_for_status()
     return r.json()["id"]
 
